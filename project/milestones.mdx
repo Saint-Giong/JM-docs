@@ -1,0 +1,372 @@
+---
+title: "Project Milestones"
+description: "Detailed timeline and deliverables for each project milestone"
+---
+
+## Project Timeline
+
+The DEVision Job Manager subsystem development is divided into two major milestones with specific deliverables and requirements.
+
+## Milestone 1: Design Documentation
+
+<Card title="Due Date" icon="calendar">
+  **18:00 on November 28, 2025**
+</Card>
+
+### Overview
+
+Milestone 1 focuses on system design and architectural planning. Teams must document design decisions and justifications in a comprehensive technical report.
+
+### Deliverables
+
+<AccordionGroup>
+  <Accordion title="Technical Report (30 pages)">
+    Comprehensive documentation covering:
+    - Data Model design and justifications
+    - System Architecture diagrams and rationale
+    - Design decisions for frontend and backend
+    - Advantages and limitations of chosen approach
+
+    **Note:** Page count does NOT include cover page and table of contents
+  </Accordion>
+
+  <Accordion title="Conceptual Data Model">
+    **Entity Relationship (ER) Model** including:
+    - High-level database schema representation
+    - All necessary entities and relationships
+    - Data elements essential for system functionality
+    - Design explanations and justifications
+
+    <Warning>
+    Advantages and drawbacks must be in ONE designated section (2 points penalty if scattered)
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Architecture Diagrams">
+    Choose one of two options:
+
+    **Option 1: UML Component Diagram**
+    - System level diagram (subsystems only)
+    - Backend architecture diagram
+    - Frontend architecture diagram
+
+    **Option 2: C4 Model**
+    - System Context diagram
+    - Container diagram
+    - Component diagrams (Backend and Frontend)
+
+    All diagrams must show:
+    - Component roles and responsibilities
+    - Interaction patterns
+    - Layer-based, Modular, or Microservice design
+  </Accordion>
+
+  <Accordion title="GitHub Contribution Proof">
+    Evidence of frequent, professional GitHub usage:
+    - Regular commits throughout the project
+    - Appropriate commit messages
+    - Professional communication
+    - Team collaboration evidence
+
+    <Warning>
+    NOT using GitHub frequently: Up to 10 points penalty
+    Missing contribution proof: 3 points penalty
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+### Technology Analysis
+
+Teams must analyze and decide on technologies:
+
+#### Frontend Options
+- React-based frameworks (React, Vite, Next.js)
+- Vanilla HTML, CSS, and JavaScript
+
+#### Backend Options
+- MEN Stack (MongoDB, ExpressJS, NodeJS)
+- Spring Boot
+- Redis and Kafka for messaging
+
+#### Deployment Options
+- Docker
+- Kubernetes (Bonus)
+
+### Architecture Justification
+
+Design justifications must address **six key aspects**:
+
+<CardGroup cols={2}>
+  <Card title="Maintainability" icon="wrench">
+    Easily understood, updated, and tested by current and future teams
+  </Card>
+  <Card title="Extensibility" icon="arrow-up-right-dots">
+    New features added with minimal impact on existing components
+  </Card>
+  <Card title="Resilience" icon="shield">
+    Continues functioning under unexpected conditions and failures
+  </Card>
+  <Card title="Scalability" icon="chart-line">
+    Handles increased load without sacrificing performance
+  </Card>
+  <Card title="Security" icon="lock">
+    Protected from unauthorized access and data breaches
+  </Card>
+  <Card title="Performance" icon="gauge-high">
+    Quick and efficient response to requests
+  </Card>
+</CardGroup>
+
+### Presentation Requirements
+
+<Steps>
+  <Step title="System Overview">
+    Present system architecture and data model
+  </Step>
+  <Step title="Feature Architecture">
+    Explain how architecture provides job posting, searching, application, and approval features
+  </Step>
+  <Step title="Design Justification">
+    Justify advantages and limitations of design choices
+  </Step>
+  <Step title="Individual Q&A">
+    Each member answers questions about their contributions
+  </Step>
+</Steps>
+
+<Warning>
+Members who cannot explain sections they contributed to will be penalized.
+</Warning>
+
+### Submission Requirements
+
+<Checklist>
+  <Check>30-page technical report with all required sections</Check>
+  <Check>ER Model diagram with explanations</Check>
+  <Check>Architecture diagrams (UML or C4)</Check>
+  <Check>GitHub contribution proof in report</Check>
+  <Check>Zip file of GitHub repository submitted to Canvas</Check>
+  <Check>Project Charter submitted before Milestone 1</Check>
+</Checklist>
+
+## Milestone 2: Implementation & Deployment
+
+<Card title="Due Date" icon="calendar">
+  **18:00 on January 13, 2026**
+</Card>
+
+### Overview
+
+Milestone 2 focuses on implementing the designed architecture with full functionality and deploying the integrated system.
+
+### Implementation Requirements
+
+#### Required Technologies
+
+<Tabs>
+  <Tab title="Frontend">
+    - React-based framework (React, Vite, Next.js)
+    - Vanilla HTML, CSS, and JavaScript
+    - Responsive design (desktop and mobile)
+  </Tab>
+  <Tab title="Backend">
+    - Database: MySQL, MongoDB, or Postgres
+    - Framework: Spring Boot or MEN Stack
+    - Caching: Redis
+    - Messaging: Kafka
+  </Tab>
+  <Tab title="Deployment">
+    - Docker (required)
+    - Kubernetes (bonus)
+  </Tab>
+</Tabs>
+
+### Functional Requirements
+
+All features must be implemented according to chosen complexity level:
+
+#### Simplex (Basic)
+- N-Tier architecture
+- Basic authentication
+- Core CRUD operations
+- Simple search functionality
+
+#### Medium
+- Modular Monolith
+- Componentized frontend
+- Advanced validation
+- Full-text search
+- Internal/External APIs
+
+#### Ultimo (Advanced)
+- Microservices architecture
+- Headless UI components
+- Database sharding
+- API Gateway and Service Discovery
+- Real-time Kafka notifications
+
+### Database Initialization Script
+
+Must include initial data:
+
+<CodeGroup>
+```sql Administrator
+-- 1 ADMIN account
+INSERT INTO users (role, email, ...)
+VALUES ('ADMIN', 'admin@devision.com', ...);
+```
+
+```sql Companies
+-- 2 Freemium companies (2 job posts each)
+-- 2 Premium companies with specific subscriptions
+INSERT INTO companies (type, name, ...)
+VALUES
+  ('FREEMIUM', 'Tech Corp', ...),
+  ('PREMIUM', 'Software Solutions', ...);
+```
+
+```sql Applicants
+-- 5 APPLICANT accounts
+-- 2 from Vietnam, 2 from Singapore, 1 other
+-- 2 Premium accounts
+INSERT INTO applicants (country, premium, ...)
+VALUES
+  ('Vietnam', true, ...),
+  ('Singapore', true, ...);
+```
+</CodeGroup>
+
+### API Integration
+
+#### APIs to Provide
+<CardGroup cols={2}>
+  <Card title="Company Profile API" icon="building">
+    Public company profile data
+  </Card>
+  <Card title="Job Post API" icon="briefcase">
+    Job posting data and management
+  </Card>
+  <Card title="Payment API" icon="credit-card">
+    Subscription payment processing
+  </Card>
+  <Card title="Authorization API" icon="key">
+    Authentication and authorization
+  </Card>
+</CardGroup>
+
+#### APIs to Consume
+<CardGroup cols={2}>
+  <Card title="Applicant Profile API" icon="user">
+    Job seeker profile data
+  </Card>
+  <Card title="Job Application API" icon="file-lines">
+    Application submissions and tracking
+  </Card>
+  <Card title="Job Applicant Auth API" icon="shield">
+    Cross-system authorization
+  </Card>
+</CardGroup>
+
+### Deployment Requirements
+
+<Tabs>
+  <Tab title="Simplex">
+    - Frontend and backend deployed in development
+    - Communication with Job Applicant system
+    - API integration working
+  </Tab>
+  <Tab title="Medium">
+    - All components Dockerized
+    - Frontend, backend, database, Redis, Kafka
+    - Hosted on 1-2 machines
+  </Tab>
+  <Tab title="Ultimo">
+    - API Gateway and Service Discovery
+    - Kafka for pub/sub and inter-system communication
+    - Separate hosting for different components
+    - Backend microservices on multiple machines
+    - **Bonus:** Kubernetes deployment
+  </Tab>
+</Tabs>
+
+### Presentation Requirements
+
+<Steps>
+  <Step title="System Demo">
+    Deploy and demonstrate integrated DEVision system
+  </Step>
+  <Step title="Feature Showcase">
+    Show all implemented functional requirements
+  </Step>
+  <Step title="API Integration">
+    Demonstrate API provision and consumption
+  </Step>
+  <Step title="Individual Q&A">
+    Answer questions about development contributions
+  </Step>
+</Steps>
+
+<Warning>
+Members who cannot explain their contributions will have corresponding grades deducted.
+</Warning>
+
+### Quality Standards
+
+All implementations must meet:
+
+<AccordionGroup>
+  <Accordion title="Security">
+    - No OWASP Top 10 vulnerabilities
+    - Proper input validation (frontend and backend)
+    - Secure password storage
+    - JWE token implementation
+    - Brute-force protection
+  </Accordion>
+
+  <Accordion title="Performance">
+    - Lazy loading for search results
+    - Optimized database queries
+    - Efficient sharding implementation
+    - Redis caching where appropriate
+  </Accordion>
+
+  <Accordion title="Code Quality">
+    - Follows architectural patterns
+    - Clean, maintainable code
+    - Proper error handling
+    - Comprehensive documentation
+  </Accordion>
+</AccordionGroup>
+
+## Penalties
+
+<Warning>
+Failure to meet requirements results in grade penalties:
+</Warning>
+
+- **P1:** Not using GitHub frequently: Up to 10 points
+- **P2:** Missing GitHub contribution proof: 3 points
+- **P3:** Not submitting repository zip file: 3 points
+- **P4:** Not submitting Project Charter: 3 points
+
+## Success Criteria
+
+To successfully complete the project:
+
+<Checklist>
+  <Check>All Milestone 1 deliverables submitted on time</Check>
+  <Check>All Milestone 2 features implemented at chosen level</Check>
+  <Check>System successfully deployed and integrated</Check>
+  <Check>API integration with Job Applicant system working</Check>
+  <Check>All team members contributed to all required areas</Check>
+  <Check>Frequent GitHub commits throughout project</Check>
+  <Check>Attended all sprint reviews and meetings</Check>
+  <Check>Professional communication and collaboration</Check>
+</Checklist>
+
+## Resources
+
+- [Project Overview](/project/overview)
+- [Team Information](/project/team)
+- [Architecture Guide](/technical/architecture)
+- [Feature Requirements](/features/overview)

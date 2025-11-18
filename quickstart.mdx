@@ -1,80 +1,175 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Quickstart Guide"
+description: "Get started with the DEVision Job Manager documentation and development"
 ---
 
-## Get started in three steps
+## Welcome to DEVision Job Manager
 
-Get your documentation site running locally and make your first customization.
+This quickstart guide will help you get started with the DEVision Job Manager subsystem, whether you're a team member or reviewing our project documentation.
 
-### Step 1: Set up your local environment
+### Step 1: Understanding the Project
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
+  <Accordion icon="book-open" title="Read the Project Overview">
+    Start by understanding the DEVision platform and our team's responsibilities:
+
+    - [Project Overview](/project/overview) - Learn about DEVision and the Job Manager subsystem
+    - [Team Saint Giong](/project/team) - Meet the team and understand our methodology
+    - [Milestones](/project/milestones) - Review project timeline and deliverables
   </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+
+  <Accordion icon="diagram-project" title="Review the Architecture">
+    Understand our technical approach:
+
+    - [System Architecture](/technical/architecture) - Microservices with Headless UI
+    - [Data Model](/technical/data-model) - Database design and sharding strategy
+    - [Deployment](/technical/deployment) - Docker and Kubernetes setup
+  </Accordion>
+
+  <Accordion icon="code" title="Explore the Features">
+    Learn about each functional requirement:
+
+    - [Authentication](/features/authentication) - Registration and login with SSO
+    - [Profile Management](/features/profile-management) - Company profiles
+    - [Job Management](/features/job-management) - Job posting and tracking
+    - [Applicant Search](/features/applicant-search) - Search and filtering
+    - [Premium Features](/features/premium-features) - Real-time notifications
+    - [Payment Service](/features/payment-service) - Subscription processing
   </Accordion>
 </AccordionGroup>
 
-### Step 2: Deploy your changes
+### Step 2: For Team Members - Development Setup
 
 <AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+  <Accordion icon="github" title="Clone the Repository">
+    Clone the DEVision Job Manager repository:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```bash
+    git clone https://github.com/saint-giong/devision-job-manager.git
+    cd devision-job-manager
+    ```
+  </Accordion>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
+  <Accordion icon="code" title="Set Up Development Environment">
+    **Frontend Setup:**
+    ```bash
+    cd frontend
+    npm install
+    npm run dev
+    ```
+
+    **Backend Setup:**
+    ```bash
+    cd backend
+    ./mvnw spring-boot:run
+    ```
+
+    See [Development Guide](/development) for detailed setup instructions.
+  </Accordion>
+
+  <Accordion icon="docker" title="Run with Docker">
+    Start all services with Docker Compose:
+
+    ```bash
+    # Copy environment variables
+    cp .env.example .env
+
+    # Start services
+    docker-compose up -d
+    ```
+
+    See [Deployment Guide](/technical/deployment) for full Docker configuration.
   </Accordion>
 </AccordionGroup>
 
-### Step 3: Go live
+### Step 3: Start Contributing
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+<AccordionGroup>
+  <Accordion icon="tasks" title="Check the Task Board">
+    Review assigned tasks on [Tuturuuu](https://tuturuuu.com/d38c5b88-7e9a-46e3-9752-9cff835eff24/tasks/boards/be15d431-b796-4394-b340-c78890de3e79):
+    - View sprint backlog
+    - Pick up new tasks
+    - Update task status
+    - Track progress on Kanban board
+  </Accordion>
 
-## Next steps
+  <Accordion icon="code-branch" title="Follow Git Workflow">
+    Use Conventional Commits and branching:
 
-Now that you have your docs running, explore these key features:
+    ```bash
+    # Create feature branch
+    git checkout -b feature/JM-123-add-login-api
+
+    # Make changes and commit
+    git add .
+    git commit -m "feat(auth): add JWT-based login endpoint"
+
+    # Push and create PR
+    git push origin feature/JM-123-add-login-api
+    ```
+
+    PRs require 2 approvals before merging.
+  </Accordion>
+
+  <Accordion icon="comments" title="Join Team Communication">
+    - **Messenger**: Daily text updates
+    - **Discord**: 10 AM daily standup
+    - **Meetings**: Sprint planning every Saturday
+
+    See [Team Information](/project/team) for full communication guidelines.
+  </Accordion>
+</AccordionGroup>
+
+## Quick Links
 
 <CardGroup cols={2}>
+  <Card title="Project Overview" icon="book" href="/project/overview">
+    Understand the DEVision platform and our goals
+  </Card>
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+  <Card title="System Architecture" icon="diagram-project" href="/technical/architecture">
+    Explore our microservices architecture
+  </Card>
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Browse API documentation and endpoints
+  </Card>
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Team Charter" icon="users" href="/project/team">
+    Learn about team structure and workflow
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Technology Stack
+
+### Frontend
+- React with TanStack Query & Router
+- Zustand for state management
+- Shadcn/ui + Tailwind CSS
+- Headless UI components
+
+### Backend
+- Spring Boot microservices
+- PostgreSQL with sharding
+- Redis for caching
+- Kafka for messaging
+
+### Deployment
+- Docker containerization
+- API Gateway + Service Discovery
+- Multi-host deployment
+
+## Important Dates
+
+<Steps>
+  <Step title="Milestone 1">
+    **November 28, 2025** - Design Documentation
+  </Step>
+  <Step title="Milestone 2">
+    **January 13, 2026** - Implementation & Deployment
+  </Step>
+</Steps>
+
+<Info>
+  **For Team Members:** Check [Team Guidelines](/project/team) for communication rules, meeting schedules, and contribution requirements.
+</Info>

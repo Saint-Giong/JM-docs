@@ -1,0 +1,722 @@
+---
+title: "Deployment Guide"
+description: "Docker containerization and deployment configuration"
+---
+
+## Deployment Overview
+
+The DEVision Job Manager subsystem is deployed using Docker containers across multiple hosts, implementing the **Ultimo (Advanced)** deployment specification.
+
+<Info>
+All services are containerized and orchestrated across at least 5 separate machines or cloud infrastructures.
+</Info>
+
+## Infrastructure Architecture
+
+### Machine Layout
+
+<Tabs>
+  <Tab title="Machine 1: Gateway">
+    **API Gateway + Service Discovery**
+
+    - Kong API Gateway or Spring Cloud Gateway
+    - Eureka Server or Consul
+    - Logical separation, same host
+    - Single entry point for all traffic
+
+    **Responsibilities:**
+    - Route requests to appropriate services
+    - Service registration and discovery
+    - Load balancing
+    - Rate limiting
+  </Tab>
+
+  <Tab title="Machine 2: Kafka">
+    **Message Broker**
+
+    - Apache Kafka brokers
+    - Zookeeper (if not using KRaft)
+    - Isolated from other services
+
+    **Topics:**
+    - job-updates
+    - applicant-profile-updates
+    - match-notifications
+    - payment-events
+  </Tab>
+
+  <Tab title="Machine 3: Backend Set 1">
+    **Core Services**
+
+    - Auth Service
+    - Profile Service
+    - Job Service
+
+    **Databases:**
+    - PostgreSQL instances (sharded)
+    - Redis (token revocation)
+  </Tab>
+
+  <Tab title="Machine 4: Backend Set 2">
+    **Supporting Services**
+
+    - Search Service
+    - Subscription Service
+    - Payment Service
+    - Notification Service
+
+    **Databases:**
+    - PostgreSQL instances
+    - MongoDB (document storage)
+  </Tab>
+
+  <Tab title="Machine 5: Frontend">
+    **Web Application**
+
+    - React application
+    - Nginx web server
+    - Static asset serving
+
+    **CDN Integration:**
+    - Cloudflare or AWS CloudFront
+    - Static asset caching
+  </Tab>
+</Tabs>
+
+## Docker Configuration
+
+### Directory Structure
+
+```
+devision-job-manager/
+├── docker-compose.yml
+├── docker-compose.dev.yml
+├── docker-compose.prod.yml
+├── .env
+├── .env.example
+├── services/
+│   ├── gateway/
+│   │   ├── Dockerfile
+│   │   └── config/
+│   ├── auth-service/
+│   │   ├── Dockerfile
+│   │   └── application.yml
+│   ├── profile-service/
+│   │   ├── Dockerfile
+│   │   └── application.yml
+│   ├── job-service/
+│   │   ├── Dockerfile
+│   │   └── application.yml
+│   ├── search-service/
+│   ├── subscription-service/
+│   ├── payment-service/
+│   └── notification-service/
+├── frontend/
+│   ├── Dockerfile
+│   ├── Dockerfile.dev
+│   └── nginx.conf
+└── infrastructure/
+    ├── kafka/
+    │   └── docker-compose.kafka.yml
+    └── databases/
+        └── docker-compose.db.yml
+```
+
+### Docker Compose - Gateway & Discovery
+
+```yaml
+# docker-compose.gateway.yml
+version: '3.8'
+
+services:
+  eureka-server:
+    image: devision/eureka-server:latest
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+    networks:
+      - devision-network
+    restart: unless-stopped
+
+  api-gateway:
+    image: devision/api-gateway:latest
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICE_URL=http://eureka-server:8761/eureka
+      - SPRING_PROFILES_ACTIVE=prod
+    depends_on:
+      - eureka-server
+    networks:
+      - devision-network
+    restart: unless-stopped
+
+networks:
+  devision-network:
+    driver: bridge
+```
+
+### Docker Compose - Kafka
+
+```yaml
+# docker-compose.kafka.yml
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - devision-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - devision-network
+
+networks:
+  devision-network:
+    external: true
+```
+
+### Docker Compose - Backend Services (Machine 3)
+
+```yaml
+# docker-compose.backend1.yml
+version: '3.8'
+
+services:
+  postgres-shard1:
+    image: postgres:15-alpine
+    container_name: postgres-shard1
+    environment:
+      POSTGRES_DB: devision_vietnam
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres-shard1-data:/var/lib/postgresql/data
+    networks:
+      - devision-network
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    networks:
+      - devision-network
+    volumes:
+      - redis-data:/data
+
+  auth-service:
+    image: devision/auth-service:latest
+    container_name: auth-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_CLIENT_SERVICE_URL=http://eureka-server:8761/eureka
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-shard1:5432/devision_vietnam
+      - SPRING_REDIS_HOST=redis
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - postgres-shard1
+      - redis
+    networks:
+      - devision-network
+    restart: unless-stopped
+
+  profile-service:
+    image: devision/profile-service:latest
+    container_name: profile-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_CLIENT_SERVICE_URL=http://eureka-server:8761/eureka
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-shard1:5432/devision_vietnam
+    depends_on:
+      - postgres-shard1
+    networks:
+      - devision-network
+    restart: unless-stopped
+
+  job-service:
+    image: devision/job-service:latest
+    container_name: job-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_CLIENT_SERVICE_URL=http://eureka-server:8761/eureka
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-shard1:5432/devision_vietnam
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - postgres-shard1
+    networks:
+      - devision-network
+    restart: unless-stopped
+
+volumes:
+  postgres-shard1-data:
+  redis-data:
+
+networks:
+  devision-network:
+    external: true
+```
+
+### Docker Compose - Backend Services (Machine 4)
+
+```yaml
+# docker-compose.backend2.yml
+version: '3.8'
+
+services:
+  postgres-main:
+    image: postgres:15-alpine
+    container_name: postgres-main
+    environment:
+      POSTGRES_DB: devision_main
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres-main-data:/var/lib/postgresql/data
+    networks:
+      - devision-network
+    ports:
+      - "5433:5432"
+
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - devision-network
+    ports:
+      - "27017:27017"
+
+  search-service:
+    image: devision/search-service:latest
+    container_name: search-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_CLIENT_SERVICE_URL=http://eureka-server:8761/eureka
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-main:5432/devision_main
+    depends_on:
+      - postgres-main
+    networks:
+      - devision-network
+
+  subscription-service:
+    image: devision/subscription-service:latest
+    container_name: subscription-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_CLIENT_SERVICE_URL=http://eureka-server:8761/eureka
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-main:5432/devision_main
+    depends_on:
+      - postgres-main
+    networks:
+      - devision-network
+
+  payment-service:
+    image: devision/payment-service:latest
+    container_name: payment-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_CLIENT_SERVICE_URL=http://eureka-server:8761/eureka
+      - STRIPE_API_KEY=${STRIPE_API_KEY}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-main:5432/devision_main
+    depends_on:
+      - postgres-main
+    networks:
+      - devision-network
+
+  notification-service:
+    image: devision/notification-service:latest
+    container_name: notification-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - EUREKA_CLIENT_SERVICE_URL=http://eureka-server:8761/eureka
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_DATA_MONGODB_URI=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/notifications
+    depends_on:
+      - mongodb
+    networks:
+      - devision-network
+
+volumes:
+  postgres-main-data:
+  mongodb-data:
+
+networks:
+  devision-network:
+    external: true
+```
+
+### Docker Compose - Frontend
+
+```yaml
+# docker-compose.frontend.yml
+version: '3.8'
+
+services:
+  frontend:
+    image: devision/frontend:latest
+    container_name: frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - REACT_APP_API_GATEWAY_URL=http://api-gateway:8080
+    networks:
+      - devision-network
+    restart: unless-stopped
+
+networks:
+  devision-network:
+    external: true
+```
+
+## Service Dockerfiles
+
+### Spring Boot Service Dockerfile
+
+```dockerfile
+# Dockerfile for Spring Boot Microservices
+FROM eclipse-temurin:17-jre-alpine as runtime
+
+WORKDIR /app
+
+# Copy JAR file
+COPY target/*.jar app.jar
+
+# Create non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+
+# Expose port
+EXPOSE 8080
+
+# Run application
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+```
+
+### React Frontend Dockerfile
+
+```dockerfile
+# Multi-stage build for React
+FROM node:18-alpine as build
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm ci
+
+# Copy source and build
+COPY . .
+RUN npm run build
+
+# Production stage with Nginx
+FROM nginx:alpine
+
+# Copy built assets
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Expose port
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+### Nginx Configuration
+
+```nginx
+# nginx.conf
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+
+    server {
+        listen 80;
+        server_name localhost;
+        root /usr/share/nginx/html;
+        index index.html;
+
+        # API proxy
+        location /api/ {
+            proxy_pass http://api-gateway:8080/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+        }
+
+        # WebSocket proxy
+        location /ws/ {
+            proxy_pass http://notification-service:8080/ws/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+            proxy_set_header Host $host;
+        }
+
+        # SPA routing
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+
+        # Cache static assets
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+}
+```
+
+## Environment Variables
+
+### .env.example
+
+```bash
+# Database
+DB_USER=devision_user
+DB_PASSWORD=your_secure_password
+MONGO_USER=mongo_user
+MONGO_PASSWORD=your_mongo_password
+
+# Redis
+REDIS_PASSWORD=your_redis_password
+
+# Kafka
+KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+
+# Payment
+STRIPE_API_KEY=sk_test_your_stripe_key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+PAYPAL_CLIENT_ID=your_paypal_client_id
+PAYPAL_CLIENT_SECRET=your_paypal_secret
+
+# JWT
+JWT_SECRET=your_jwt_secret_key_minimum_32_characters
+JWT_EXPIRATION=3600000
+
+# Email
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=noreply@devision.com
+SMTP_PASSWORD=your_email_password
+
+# SSO
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_secret
+MICROSOFT_CLIENT_ID=your_microsoft_client_id
+MICROSOFT_CLIENT_SECRET=your_microsoft_secret
+
+# Application
+FRONTEND_URL=https://devision.com
+API_GATEWAY_URL=https://api.devision.com
+```
+
+## Deployment Commands
+
+### Initial Setup
+
+```bash
+# Create external network
+docker network create devision-network
+
+# Deploy Gateway & Service Discovery (Machine 1)
+docker-compose -f docker-compose.gateway.yml up -d
+
+# Deploy Kafka (Machine 2)
+docker-compose -f docker-compose.kafka.yml up -d
+
+# Deploy Backend Services Set 1 (Machine 3)
+docker-compose -f docker-compose.backend1.yml up -d
+
+# Deploy Backend Services Set 2 (Machine 4)
+docker-compose -f docker-compose.backend2.yml up -d
+
+# Deploy Frontend (Machine 5)
+docker-compose -f docker-compose.frontend.yml up -d
+```
+
+### Health Checks
+
+```bash
+# Check all services status
+docker ps
+
+# Check service logs
+docker logs -f <container-name>
+
+# Check Eureka dashboard
+curl http://localhost:8761
+
+# Check API Gateway
+curl http://localhost:8080/actuator/health
+```
+
+## Kubernetes (Bonus)
+
+<Info>
+Kubernetes deployment provides advanced orchestration, auto-scaling, and resilience.
+</Info>
+
+### Kubernetes Manifest Example
+
+```yaml
+# auth-service-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  labels:
+    app: auth-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+      - name: auth-service
+        image: devision/auth-service:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+        - name: EUREKA_CLIENT_SERVICE_URL
+          value: "http://eureka-server:8761/eureka"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+spec:
+  selector:
+    app: auth-service
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+```
+
+## Monitoring & Logging
+
+### Prometheus + Grafana
+
+```yaml
+# monitoring/docker-compose.monitoring.yml
+version: '3.8'
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - devision-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - devision-network
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  devision-network:
+    external: true
+```
+
+## Related Documentation
+
+- [Architecture](/technical/architecture)
+- [Data Model](/technical/data-model)
+- [Project Milestones](/project/milestones)
