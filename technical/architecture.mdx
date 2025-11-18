@@ -232,42 +232,43 @@ public void createJobPost(JobPostRequest request) {
 
 **Frontend - Headless UI (A.3.a):**
 
-<Accordion title="Headless Component Pattern">
-Separate logic from presentation for maximum reusability
+<AccordionGroup>
+  <Accordion title="Headless Component Pattern">
+    Separate logic from presentation for maximum reusability
 
-**Example: Data Table Component**
+    **Example: Data Table Component**
 
-```typescript
-// Headless logic
-function useTable<T>(data: T[], columns: Column[]) {
-  const [sortBy, setSortBy] = useState<string>();
-  const [filterBy, setFilterBy] = useState<string>();
+    ```typescript
+    // Headless logic
+    function useTable<T>(data: T[], columns: Column[]) {
+      const [sortBy, setSortBy] = useState<string>();
+      const [filterBy, setFilterBy] = useState<string>();
 
-  const sortedData = useMemo(() => {
-    // Sorting logic
-  }, [data, sortBy]);
+      const sortedData = useMemo(() => {
+        // Sorting logic
+      }, [data, sortBy]);
 
-  const filteredData = useMemo(() => {
-    // Filtering logic
-  }, [sortedData, filterBy]);
+      const filteredData = useMemo(() => {
+        // Filtering logic
+      }, [sortedData, filterBy]);
 
-  return { data: filteredData, sortBy, setSortBy, filterBy, setFilterBy };
-}
+      return { data: filteredData, sortBy, setSortBy, filterBy, setFilterBy };
+    }
 
-// Usage in Job Posts
-<Table data={jobPosts} columns={jobColumns} />
+    // Usage in Job Posts
+    <Table data={jobPosts} columns={jobColumns} />
 
-// Usage in Applications
-<Table data={applications} columns={applicationColumns} />
-```
+    // Usage in Applications
+    <Table data={applications} columns={applicationColumns} />
+    ```
 
-**Shared Templates:**
-
-- Tables (job posts, applications, applicants)
-- Forms (login, registration, profile edit)
-- Modals (confirm delete, view details)
-- Cards (job card, applicant card, company card)
+    **Shared Templates:**
+    - Tables (job posts, applications, applicants)
+    - Forms (login, registration, profile edit)
+    - Modals (confirm delete, view details)
+    - Cards (job card, applicant card, company card)
   </Accordion>
+</AccordionGroup>
 
 ## Communication Patterns
 

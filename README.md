@@ -59,11 +59,21 @@ The project requirements are organized into three complexity levels:
 5. Applicant Search with full-text search
 6. Premium Subscription with real-time notifications
 
-### Integration
+### Integration with SGJA
+
+Team SGJM collaborates with Team SGJA (Saint Giong Job Applicant) within the Saint Giong Squad.
+
+**SGJA Coordinators:**
+
+- Phuc Vo (Primary Coordinator)
+- Tung Nguyen (Secondary Coordinator)
+
+**Integration Points:**
 
 - API provision to Job Applicant subsystem
 - API consumption from Job Applicant subsystem
-- Payment service for both subsystems
+- Shared Payment service for both subsystems
+- Kafka messaging for real-time notifications
 
 ## Development
 

@@ -72,18 +72,34 @@ SGJM Team is responsible for developing the **Job Manager Subsystem**, which ser
 
 ## Integration with Job Applicant Subsystem
 
-### APIs We Provide
+<Info>
+**SGJM ↔ SGJA Collaboration**
 
-1. Company Public Profile Data
-2. Job Post Data
-3. Subscription Payment API
-4. Authorization Services
+Team SGJM (Saint Giong Job Manager) and Team SGJA (Saint Giong Job Applicant) work together within the Saint Giong Squad to deliver the complete DEVision platform.
 
-### APIs We Consume
+**Coordination Team:**
+- Phuc Vo (SGJM Primary Coordinator)
+- Tung Nguyen (SGJM Secondary Coordinator)
+</Info>
 
-1. Applicant Profile Data
-2. Job Application API
-3. Authorization Services
+### APIs We Provide to SGJA
+
+1. **Company Public Profile Data** - Company information for job listings
+2. **Job Post Data** - Available positions and requirements
+3. **Subscription Payment API** - Shared payment service for both subsystems
+4. **Authorization Services** - Cross-system authentication when applicable
+
+### APIs We Consume from SGJA
+
+1. **Applicant Profile Data** - Job seeker information for search functionality
+2. **Job Application API** - Application submissions and tracking
+3. **Authorization Services** - Cross-system authentication when applicable
+
+### Shared Components
+
+- **Payment Service** - Developed by SGJM team, used by both subsystems
+- **Kafka Topics** - Shared messaging for real-time notifications
+- **Database Sharding Strategy** - Coordinated across both subsystems
 
 ## Development Methodology
 
