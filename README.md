@@ -1,6 +1,4 @@
-# SGJM - Saint Giong Job Manager Documentation
-
-**RMIT Classification: Protected**
+# Saint Giong Job Manager Documentation
 
 This repository contains the official documentation for the **DEVision Job Manager Subsystem (SGJM)**, developed by **Team Saint Giong** for the EEET2582/ISYS3461 Software Engineering course at RMIT University.
 
@@ -27,15 +25,18 @@ Our team is responsible for developing the **Job Manager Subsystem**, which prov
 ## Technology Stack
 
 ### Frontend
+
 - React-based frameworks (React, Vite, Next.js)
 - Vanilla HTML, CSS, and JavaScript
 
 ### Backend
+
 - Spring Boot or MEN Stack (MongoDB, ExpressJS, NodeJS)
 - Redis for caching
 - Kafka for message streaming
 
 ### Deployment
+
 - Docker
 - Kubernetes (Bonus)
 
@@ -50,6 +51,7 @@ The project requirements are organized into three complexity levels:
 ## Key Features
 
 ### Core Features
+
 1. Company Registration with email validation
 2. Secure Login with JWE tokens
 3. Profile Management with media uploads
@@ -58,6 +60,7 @@ The project requirements are organized into three complexity levels:
 6. Premium Subscription with real-time notifications
 
 ### Integration
+
 - API provision to Job Applicant subsystem
 - API consumption from Job Applicant subsystem
 - Payment service for both subsystems
@@ -96,6 +99,7 @@ View at `http://localhost:3000`
 ## Team Collaboration
 
 We follow an iterative development approach using:
+
 - SCRUM/Kanban methodology
 - GitHub for version control and collaboration
 - [Tuturuuu](https://tuturuuu.com/d38c5b88-7e9a-46e3-9752-9cff835eff24/tasks/boards/be15d431-b796-4394-b340-c78890de3e79) for task management and Kanban board
