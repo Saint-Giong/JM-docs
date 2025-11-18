@@ -21,51 +21,51 @@ Our primary goals are to:
 DEVision is architected into two core subsystems:
 
 <Columns cols={2}>
-  <Card
-    title="Job Applicant Subsystem"
-    icon="user"
-  >
-    Provides tools for career advancement, job search, and application management
+  <Card title="Job Applicant Subsystem" icon="user">
+    Provides tools for career advancement, job search, and application
+    management
   </Card>
-  <Card
-    title="Job Manager Subsystem"
-    icon="building"
-  >
+  <Card title="Job Manager Subsystem" icon="building">
     Platform for companies to manage recruitment and search for candidates
   </Card>
 </Columns>
 
-## Team Saint Giong - Job Manager Subsystem
+## Saint Giong Team - Job Manager Subsystem
 
-Team Saint Giong is responsible for developing the **Job Manager Subsystem**, which serves companies in their recruitment efforts.
+SGJM Team is responsible for developing the **Job Manager Subsystem**, which serves companies in their recruitment efforts.
 
 ### Core Capabilities
 
 #### 1. Company Management
+
 - Secure registration and authentication
 - Single Sign-On (SSO) support
 - Comprehensive profile management
 - Media uploads (logos, images, videos)
 
 #### 2. Job Post Management
+
 - Create and publish job listings
 - Manage employment types and requirements
 - Tag technical skills and competencies
 - Track applications (Pending/Archived)
 
 #### 3. Candidate Search
+
 - Search applicants by location, education, and experience
 - Full-text search across profiles
 - Filter by technical skills
 - Lazy loading for optimal performance
 
 #### 4. Premium Features
+
 - Monthly subscription service ($30/month)
 - Real-time notifications for matching candidates
 - Define custom applicant search profiles
 - Automatic candidate matching via Kafka messaging
 
 #### 5. Payment Integration
+
 - Secure payment processing
 - Third-party integration (Stripe/PayPal)
 - Transaction recording and management
@@ -73,12 +73,14 @@ Team Saint Giong is responsible for developing the **Job Manager Subsystem**, wh
 ## Integration with Job Applicant Subsystem
 
 ### APIs We Provide
+
 1. Company Public Profile Data
 2. Job Post Data
 3. Subscription Payment API
 4. Authorization Services
 
 ### APIs We Consume
+
 1. Applicant Profile Data
 2. Job Application API
 3. Authorization Services
@@ -86,21 +88,25 @@ Team Saint Giong is responsible for developing the **Job Manager Subsystem**, wh
 ## Development Methodology
 
 <Warning>
-All teams must follow professional software development practices as outlined in the requirements.
+  All teams must follow professional software development practices as outlined
+  in the requirements.
 </Warning>
 
 ### Collaborative Development
+
 - **Methodology**: SCRUM or Kanban
 - **Tools**: [Tuturuuu](https://tuturuuu.com/d38c5b88-7e9a-46e3-9752-9cff835eff24/tasks/boards/be15d431-b796-4394-b340-c78890de3e79) Kanban board for task management
 - **Reviews**: Bi-weekly sprint reviews with the lecturer
 
 ### Key Practices
+
 - Iterative development approach
 - Frequent GitHub commits
 - Professional communication
 - Active participation in meetings
 
 ### Meeting Policy
+
 - Attendance is mandatory
 - 24-hour advance notice required for absences
 - Valid justification and evidence required
@@ -111,12 +117,14 @@ All teams must follow professional software development practices as outlined in
 ### Milestone 1 - November 28, 2025
 
 **Deliverables:**
+
 - Conceptual Data Model (ER Diagram)
 - System Architecture Diagrams
 - 30-page Technical Report
 - GitHub contribution proof
 
 **Key Requirements:**
+
 - Design data model with justifications
 - Create architecture diagrams (UML or C4)
 - Present system design decisions
@@ -125,12 +133,14 @@ All teams must follow professional software development practices as outlined in
 ### Milestone 2 - January 13, 2026
 
 **Deliverables:**
+
 - Fully implemented system
 - Deployed application (Docker/Kubernetes)
 - API integration with Job Applicant subsystem
 - Database initialization scripts
 
 **Key Requirements:**
+
 - Implement all functional requirements
 - Deploy using Docker or Kubernetes
 - Provide and consume APIs
@@ -141,15 +151,18 @@ All teams must follow professional software development practices as outlined in
 The system must be initialized with:
 
 ### Administrator
+
 - One ADMIN account for system management
 
 ### Companies
+
 - 2 Freemium accounts (2 job posts each)
 - 2 Premium accounts with specific subscriptions:
   - Software Engineer hiring (React, Spring Boot, Docker)
   - Data Engineer hiring (Python, AWS, Snowflake)
 
 ### Applicants
+
 - 5 APPLICANT accounts
   - 2 from Vietnam, 2 from Singapore, 1 from another nation
   - 2 Premium accounts (one from Vietnam, one from Singapore)
@@ -157,12 +170,14 @@ The system must be initialized with:
 ## Architecture Complexity Levels
 
 ### Simplex (Basic)
+
 - N-Tier (Layer-based) architecture
 - Frontend and backend separation
 - Repository layer for queries
 - Basic authentication and features
 
 ### Medium
+
 - Modular Monolith backend
 - Componentized frontend
 - Internal/External APIs
@@ -170,6 +185,7 @@ The system must be initialized with:
 - Advanced validation and security
 
 ### Ultimo (Advanced)
+
 - Microservices architecture
 - Headless UI components
 - Kafka message broker
@@ -196,5 +212,6 @@ All architectural decisions should be evaluated on:
 - **Classification**: RMIT Protected
 
 <Info>
-This project is part of the Software Engineering curriculum at RMIT University and follows strict academic and professional standards.
+  This project is part of the Software Engineering curriculum at RMIT University
+  and follows strict academic and professional standards.
 </Info>

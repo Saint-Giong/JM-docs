@@ -1,6 +1,6 @@
 # Saint Giong Job Manager Documentation
 
-This repository contains the official documentation for the **DEVision Job Manager Subsystem (SGJM)**, developed by **Team Saint Giong** for the EEET2582/ISYS3461 Software Engineering course at RMIT University.
+This repository contains the official documentation for the **DEVision Job Manager Subsystem (SGJM)**, developed by **SGJM Team** for the EEET2582/ISYS3461 Software Engineering course at RMIT University.
 
 ## About the Project
 
