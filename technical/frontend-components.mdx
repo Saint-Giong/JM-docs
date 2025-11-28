@@ -1,0 +1,347 @@
+---
+title: "Frontend Components"
+description: "C4 component diagrams for all Job Manager frontend feature modules"
+---
+
+## Overview
+
+The Job Manager frontend is built using a **Headless UI Architecture** with Next.js, separating business logic (hooks) from visual presentation (UI components). This page provides detailed C4 component diagrams for each feature module.
+
+<Info>
+  All feature modules share common infrastructure: **Fetcher Utilities** for API calls, **Constants Manager** for URLs, and the **bamboo-ui** shared component library.
+</Info>
+
+## Architecture Pattern
+
+<CardGroup cols={2}>
+  <Card title="Headless Hooks" icon="code">
+    Encapsulate business logic, state management, and event handlers without rendering UI
+  </Card>
+  <Card title="UI Components" icon="palette">
+    Reusable visual primitives from bamboo-ui that consume hooks for behavior
+  </Card>
+  <Card title="Feature Services" icon="gear">
+    API integration layer using Fetcher Utilities for backend communication
+  </Card>
+  <Card title="Validation Schemas" icon="shield-check">
+    Zod schemas for client-side validation of form inputs
+  </Card>
+</CardGroup>
+
+## Common Infrastructure
+
+All feature components connect to these shared containers:
+
+| Container | Technology | Purpose |
+|-----------|------------|---------|
+| **Page** | Next.js | Root page container and routing |
+| **Fetcher Utilities** | TypeScript | HTTP/HTTPS requests to backend |
+| **Constants Manager** | TypeScript | Centralized URL and config management |
+| **bamboo-ui** | React + TailwindCSS | Shared UI component library |
+
+---
+
+## Signup Component
+
+Implements multi-path registration flow with credentials and Google SSO support.
+
+<Frame>
+  <img src="/images/diagrams/frontend/signup.png" alt="Signup Component Diagram" />
+</Frame>
+
+### Components
+
+<Tabs>
+  <Tab title="Feature Components">
+    | Component | Purpose |
+    |-----------|---------|
+    | **SSO Service** | Handles Google SSO redirect and token exchange |
+    | **SSO Button** | Styled button that triggers OAuth flow |
+    | **Signup Form** | Renders registration fields (Name, Email, Password) |
+    | **Signup Service** | Sends validated data to backend |
+    | **ValidateSchema** | Zod schema for signup field validation |
+  </Tab>
+  <Tab title="Reusable Components">
+    | Component | Hook | Purpose |
+    |-----------|------|---------|
+    | **Headless UI Button** | Headless Button Hook | Consistent button behavior and accessibility |
+    | **Headless UI Form** | Headless Form Hook | Form state, isDirty, isSubmitting flags |
+    | **Headless UI Combobox** | Headless Combobox Hook | Country selection dropdown |
+  </Tab>
+</Tabs>
+
+---
+
+## Login Component
+
+Facilitates secure authentication with credentials and Google SSO.
+
+<Frame>
+  <img src="/images/diagrams/frontend/login.png" alt="Login Component Diagram" />
+</Frame>
+
+### Components
+
+<Tabs>
+  <Tab title="Feature Components">
+    | Component | Purpose |
+    |-----------|---------|
+    | **SSO Service** | Handles Google SSO redirect and token exchange |
+    | **SSO Button** | Styled button for "Sign in with Google" |
+    | **Login Form** | Renders credential fields (Email, Password) |
+    | **Login Service** | Manages OAuth 2.0 flow and token handling |
+    | **ValidateSchema** | Zod schema for login validation |
+  </Tab>
+  <Tab title="Reusable Components">
+    | Component | Hook | Purpose |
+    |-----------|------|---------|
+    | **Headless UI Button** | Headless Button Hook | Button behavior and loading states |
+    | **Headless UI Form** | Headless Form Hook | Form submission and validation |
+  </Tab>
+</Tabs>
+
+---
+
+## Dashboard Component
+
+Central operational hub aggregating KPIs, recent job posts, notifications, and quick actions.
+
+<Frame>
+  <img src="/images/diagrams/frontend/dashboard.png" alt="Dashboard Component Diagram" />
+</Frame>
+
+### Components
+
+<Tabs>
+  <Tab title="Overview Section">
+    | Component | Purpose |
+    |-----------|---------|
+    | **getCompanyKpisData** | Fetches analytical metrics from backend |
+    | **OverviewCard** | Renders high-level metrics (Total Views, New Applicants) |
+  </Tab>
+  <Tab title="Recent Job Posts">
+    | Component | Purpose |
+    |-----------|---------|
+    | **Recent Job Posts Card** | Displays summary of latest active postings |
+    | **getJobPostsData** | Retrieves job posting history with pagination |
+  </Tab>
+  <Tab title="Right Panel">
+    | Component | Purpose |
+    |-----------|---------|
+    | **getNewNotification** | Fetches/polls user-specific alerts |
+    | **Notification Section** | Real-time feed of system alerts |
+    | **Premium Action Section** | Quick-access premium operations |
+    | **Premium Action Services** | Execution logic for premium actions |
+    | **Draft Action Section** | Quick-access draft operations |
+    | **Draft Job Post Services** | Execution logic for draft actions |
+  </Tab>
+  <Tab title="Reusable Components">
+    | Component | Hook | Purpose |
+    |-----------|------|---------|
+    | **Headless UI Card** | Headless Card Hook | Dashboard widget containers |
+    | **Headless List** | Headless List Hook | Notification and action feeds |
+    | **Headless Table** | Headless Table Hook | Job posts data table |
+  </Tab>
+</Tabs>
+
+---
+
+## Profile Component
+
+Manages company profile viewing and editing with media gallery support.
+
+<Frame>
+  <img src="/images/diagrams/frontend/profile.png" alt="Profile Component Diagram" />
+</Frame>
+
+### Components
+
+<Tabs>
+  <Tab title="Media Section">
+    | Component | Purpose |
+    |-----------|---------|
+    | **Media Services** | Retrieves activity feed, posts, and media attachments |
+    | **MediaGallery** | Renders "Activities" section with posts and media |
+  </Tab>
+  <Tab title="Profile Header">
+    | Component | Purpose |
+    |-----------|---------|
+    | **getPublicProfileSummaryInfo** | Retrieves high-level identity data (Name, Avatar, Bio) |
+    | **ProfileHeaderCard** | Renders main profile banner with avatar and actions |
+  </Tab>
+  <Tab title="Profile Info">
+    | Component | Purpose |
+    |-----------|---------|
+    | **getPublicProfileInfo** | Retrieves detailed profile content (About Us, Contact) |
+    | **ProfileInfoForm** | Renders editable profile sections |
+    | **ValidateSchema** | Zod schema for profile field validation |
+  </Tab>
+  <Tab title="Reusable Components">
+    | Component | Hook | Purpose |
+    |-----------|------|---------|
+    | **Headless UI Card** | Headless Card Hook | Profile section containers |
+    | **Headless UI Button** | Headless Button Hook | Edit/Share action buttons |
+    | **Headless UI Form** | Headless Form Hook | Profile editing form |
+  </Tab>
+</Tabs>
+
+---
+
+## Subscription Component
+
+Handles premium subscription workflow and payment gateway integration.
+
+<Frame>
+  <img src="/images/diagrams/frontend/subscription.png" alt="Subscription Component Diagram" />
+</Frame>
+
+### Components
+
+<Tabs>
+  <Tab title="Feature Components">
+    | Component | Purpose |
+    |-----------|---------|
+    | **getSubscriptionInfo** | Fetches plan details and current subscription status |
+    | **SubscriptionInfoCard** | Renders pricing plan details (Title, Price, Features) |
+    | **Payment Service** | Centralizes payment processing and checkout redirection |
+  </Tab>
+  <Tab title="Reusable Components">
+    | Component | Hook | Purpose |
+    |-----------|------|---------|
+    | **Headless UI Card** | Headless Card Hook | Plan comparison cards |
+    | **Headless UI Button** | Headless Button Hook | "Buy plan" and "Subscribe" actions |
+  </Tab>
+</Tabs>
+
+### Payment Flow
+
+<Steps>
+  <Step title="Fetch Plans">
+    getSubscriptionInfo retrieves available plans from backend
+  </Step>
+  <Step title="Display Options">
+    SubscriptionInfoCard renders Free vs Premium comparison
+  </Step>
+  <Step title="Initiate Payment">
+    Payment Service prepares checkout payload
+  </Step>
+  <Step title="Redirect">
+    User redirected to Stripe checkout page
+  </Step>
+</Steps>
+
+---
+
+## Job Post Management Component
+
+Handles complete job lifecycle: creation, editing, skill tagging, and application tracking.
+
+<Frame>
+  <img src="/images/diagrams/frontend/jobpost.png" alt="Job Post Component Diagram" />
+</Frame>
+
+### Components
+
+<Tabs>
+  <Tab title="Job Post Info">
+    | Component | Purpose |
+    |-----------|---------|
+    | **JobPostForm** | Renders job creation fields (Title, Description, Salary) |
+    | **Job Post Service** | Manages CRUD operations for job postings |
+    | **JobPostSchemaValidation** | Zod schema for job post field validation |
+  </Tab>
+  <Tab title="Skill Tags">
+    | Component | Purpose |
+    |-----------|---------|
+    | **Skill Service** | Fetches master list of skills for autocomplete |
+    | **JobPostSkillTags** | Interactive tag input for skill requirements |
+  </Tab>
+  <Tab title="Applications">
+    | Component | Purpose |
+    |-----------|---------|
+    | **JobPostApplicationTable** | Displays candidates who applied to the job |
+    | **Application Service** | Fetches applicant list for a given JobPost ID |
+  </Tab>
+  <Tab title="Reusable Components">
+    | Component | Hook | Purpose |
+    |-----------|------|---------|
+    | **Headless TagInput** | Headless TagInput Hook | Skill tag management |
+    | **Headless Form** | Headless Form Hook | Job creation form |
+    | **Headless Select** | Headless Select Hook | Employment type dropdown |
+    | **Headless Table** | Headless Table Hook | Application data table |
+  </Tab>
+</Tabs>
+
+---
+
+## Applicant Search Component
+
+Powers the "Headhunting" feature with advanced filtering and search capabilities.
+
+<Frame>
+  <img src="/images/diagrams/frontend/applicantsearch.png" alt="Applicant Search Component Diagram" />
+</Frame>
+
+### Components
+
+<Tabs>
+  <Tab title="Search Components">
+    | Component | Purpose |
+    |-----------|---------|
+    | **Search Orchestrator Service** | Centralizes search logic, aggregates query parameters |
+    | **SearchBar** | Renders search input with debounced handling |
+    | **Skill Service** | Fetches available skills for autocomplete suggestions |
+    | **SkillsFilter** | Renders skill tags input for filtering by tech stack |
+  </Tab>
+  <Tab title="Reusable Components">
+    | Component | Hook | Purpose |
+    |-----------|------|---------|
+    | **Headless TagInput** | Headless TagInput Hook | Multi-select skill filtering |
+    | **Headless SearchBar** | Headless SearchBar Hook | Debouncing and search state |
+    | **Headless Input** | Headless Input Hook | Standard text filter fields |
+  </Tab>
+</Tabs>
+
+### Search Flow
+
+<Steps>
+  <Step title="User Input">
+    SearchBar captures keyword, SkillsFilter captures skills
+  </Step>
+  <Step title="Debounce">
+    Headless SearchBar Hook delays API calls until typing stops
+  </Step>
+  <Step title="Orchestrate">
+    Search Orchestrator Service aggregates all filter criteria
+  </Step>
+  <Step title="Execute">
+    Fetcher Utilities sends search request to backend
+  </Step>
+</Steps>
+
+---
+
+## Headless UI Component Library
+
+All feature modules share these reusable headless components from **bamboo-ui**:
+
+| Component | Hook | Use Cases |
+|-----------|------|-----------|
+| **Headless UI Button** | Headless Button Hook | All clickable actions |
+| **Headless UI Form** | Headless Form Hook | All form submissions |
+| **Headless UI Card** | Headless Card Hook | Dashboard widgets, profile sections |
+| **Headless UI Combobox** | Headless Combobox Hook | Country selection |
+| **Headless Select** | Headless Select Hook | Dropdown menus |
+| **Headless TagInput** | Headless TagInput Hook | Skill tag management |
+| **Headless SearchBar** | Headless SearchBar Hook | Search inputs with debounce |
+| **Headless Input** | Headless Input Hook | Standard text inputs |
+| **Headless List** | Headless List Hook | Notification feeds |
+| **Headless Table** | Headless Table Hook | Data tables with sorting |
+
+---
+
+## Related Documentation
+
+- [System Architecture](/technical/architecture)
+- [Backend Components](/technical/backend-components)
+- [UI Mockups](/features/ui-mockups)
