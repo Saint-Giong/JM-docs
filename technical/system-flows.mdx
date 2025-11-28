@@ -1,0 +1,443 @@
+---
+title: "System Flows"
+description: "Detailed communication flows between frontend, backend services, and external systems"
+---
+
+## Overview
+
+This page documents the complete communication flows between Job Manager components, including REST API calls and Kafka event messaging. All Kafka messages use **AVRO format** for schema-based serialization.
+
+<Info>
+  **Kafka Topic Naming Convention:**
+  - Request topics: `JM_*` or `JA_*` prefix
+  - Reply topics: `*_REPLY` suffix
+</Info>
+
+---
+
+## Company Registration
+
+Multi-step registration flow with Kafka-based profile creation.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant Auth as Auth Service
+    participant Profile as Profile Service
+    participant DB as Auth Database
+    participant PDB as Profile Database
+
+    FE->>Auth: REST: POST /register
+    Auth->>DB: Create auth record
+    Auth->>Profile: Kafka: JM_COMPANY_REGISTRATION
+    Profile->>PDB: Create profile record
+    Profile->>Auth: Kafka: JM_COMPANY_REGISTRATION_REPLY
+    Auth->>FE: Response: Success
+    FE->>FE: Redirect to Login
+```
+
+### Flow Details
+
+<Steps>
+  <Step title="Frontend Submission">
+    User submits registration form with company details
+  </Step>
+  <Step title="Auth Record Creation">
+    Auth Service creates authentication record in database
+  </Step>
+  <Step title="Profile Event">
+    Auth publishes `JM_COMPANY_REGISTRATION` (AVRO) to Profile Service
+  </Step>
+  <Step title="Profile Creation">
+    Profile Service consumes event, creates profile record in database
+  </Step>
+  <Step title="Reply Event">
+    Profile publishes `JM_COMPANY_REGISTRATION_REPLY` (AVRO) to Auth
+  </Step>
+  <Step title="Response">
+    Auth responds to REST request, Frontend redirects to Login
+  </Step>
+</Steps>
+
+---
+
+## Company Login
+
+Authentication flow with JWT token generation and caching.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant Auth as Auth Service
+    participant Cache as Token Cache (Redis)
+    participant DB as Auth Database
+
+    FE->>Auth: REST: POST /login
+    Auth->>DB: Verify credentials
+    Auth->>Auth: Generate auth_token & refresh_token
+    Auth->>Cache: Store tokens
+    Auth->>FE: Response: Set JWE in Cookies
+```
+
+### Flow Details
+
+<Steps>
+  <Step title="Credential Submission">
+    User submits login form with email and password
+  </Step>
+  <Step title="Verification">
+    Auth Service verifies credentials against database
+  </Step>
+  <Step title="Token Generation">
+    Auth creates `auth_token` and `refresh_token`
+  </Step>
+  <Step title="Token Caching">
+    Tokens stored in Redis Token Cache Database
+  </Step>
+  <Step title="Response">
+    JWE tokens set in browser cookies for session management
+  </Step>
+</Steps>
+
+---
+
+## Company Profile Management
+
+### Update Company Profile
+
+Direct REST update to Profile Service.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant Profile as Profile Service
+    participant DB as Profile Database
+
+    FE->>Profile: REST: PUT /profile
+    Profile->>DB: Update record
+    Profile->>FE: Response: Update successful
+```
+
+### Upload/Update Company Logo
+
+Media upload with Kafka notification to Profile Service.
+
+<Info>
+  **URL Format:** `[company_id]-logo-[filename.*]`
+</Info>
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant Media as Media Service
+    participant Storage as Media File Storage
+    participant Profile as Profile Service
+
+    FE->>Media: REST: POST /media/logo
+    Media->>Storage: Upload file
+    Storage->>Media: Return URL
+    Media->>Profile: Kafka: JM_LOGO_UPDATED
+    Media->>FE: Response: Media URL
+```
+
+### Upload/Update Images and Videos
+
+Media upload with database record persistence.
+
+<Info>
+  **URL Format:** `[company_id]-[image/video]-[filename.*]`
+</Info>
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant Media as Media Service
+    participant Storage as Media File Storage
+    participant DB as Media Database
+
+    FE->>Media: REST: POST /media/files
+    Media->>Storage: Upload files
+    Storage->>Media: Return URLs
+    Media->>DB: Save media records
+    Media->>FE: Response: Media URLs
+```
+
+---
+
+## Job Post Management
+
+### Display Applications of Job Post
+
+Cross-system query to JA Backend for application data.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant JP as Job Post Service
+    participant JA as JA Application Service
+
+    FE->>JP: REST: GET /jobposts/{id}/applications
+    JP->>JA: Kafka: JM_APPLICATION_REQUESTED
+    JA->>JP: Kafka: JM_APPLICATION_REQUESTED_REPLY
+    JP->>FE: Response: Application list
+```
+
+### Archive Application
+
+Update application status with cross-system synchronization.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant JP as Job Post Service
+    participant JA as JA Application Service
+
+    FE->>JP: REST: PUT /applications/{id}/archive
+    JP->>JA: Kafka: JM_APPLICATION_STATUS_UPDATED
+    JA->>JP: Kafka: JM_APPLICATION_STATUS_UPDATED_REPLY
+    JP->>FE: Response: Status updated
+```
+
+### Create/Update Job Post
+
+Job post lifecycle with skill tag management.
+
+<Info>
+  The `JobPost_SkillTag` index table is stored inside the Job Post Database.
+</Info>
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant Tag as Skill Tag Service
+    participant JP as Job Post Service
+    participant DB as Job Post Database
+
+    FE->>Tag: REST: GET /tags
+    Tag->>FE: Response: Tag list
+    FE->>JP: REST: POST/PUT /jobposts
+    JP->>DB: Create/Update post + skill tags
+    JP->>FE: Response: Job post data
+```
+
+### Search/Manage Skill Tags
+
+Dynamic tag management during job post editing.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant Tag as Skill Tag Service
+    participant DB as Tag Database
+
+    FE->>Tag: REST: POST /tags (create new)
+    Tag->>DB: Insert tag record
+    Tag->>FE: Response: New tag
+
+    FE->>Tag: REST: DELETE /tags/{id}
+    Tag->>DB: Delete tag record
+    Tag->>FE: Response: Deleted
+```
+
+### Real-time Notification on Job Post Changes
+
+Notify matching applicants when job posts are created or updated.
+
+```mermaid
+sequenceDiagram
+    participant JP as Job Post Service
+    participant JA as JA Notification Service
+
+    Note over JP: On CREATE
+    JP->>JA: Kafka: JM_POST_ADDED
+
+    Note over JP: On UPDATE
+    JP->>JA: Kafka: JM_POST_UPDATED
+
+    JA->>JA: Match with applicant profiles
+    JA->>JA: Send real-time notifications
+```
+
+---
+
+## Applicant Search and Marker
+
+### Applicant Search (Search Filter Form)
+
+Cross-system search query to JA Backend.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant AD as Applicant Discovery Service
+    participant JA as JA Backend
+
+    FE->>AD: REST: POST /search
+    AD->>JA: Kafka: JM_APPLICANT_SEARCH_REQUESTED
+    JA->>JA: Process search query
+    JA->>AD: Kafka: JM_APPLICANT_SEARCH_REPLY
+    AD->>FE: Response: Search results
+```
+
+### Applicant Marker
+
+Mark applicants as Favorite or Warning.
+
+<Info>
+  The `Company_Applicant_Marker` table is stored inside the Company Profile Database.
+</Info>
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant Profile as Profile Service
+    participant DB as Profile Database
+
+    FE->>Profile: REST: POST/PUT/DELETE /markers
+    Profile->>DB: Create/Update/Delete marker
+    Profile->>FE: Response: Marker status
+```
+
+---
+
+## Premium Company Subscription
+
+### Premium Subscription Payment
+
+Payment processing with subscription status update.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant Payment as Payment Service
+    participant Auth as Auth Service
+    participant Stripe as External Payment
+
+    FE->>Payment: REST: POST /subscribe
+    Payment->>Stripe: Process payment
+    Stripe->>Payment: Payment success
+    Payment->>Auth: Kafka: JM_SUBSCRIPTION_PAID
+    Auth->>Auth: Update subscription status
+    Auth->>Payment: Kafka: JM_SUBSCRIPTION_PAID_REPLY
+    Payment->>FE: Response: Subscription active
+```
+
+### JA Subscription (Cross-System)
+
+Handle payment requests from Job Applicant system.
+
+```mermaid
+sequenceDiagram
+    participant JA as JA Backend
+    participant Payment as Payment Service
+    participant Stripe as External Payment
+
+    JA->>Payment: Kafka: PAYMENT_REQUESTED
+    Payment->>Stripe: Process payment
+    Stripe->>Payment: Payment result
+    Payment->>JA: Kafka: PAYMENT_REPLIED
+```
+
+### Subscription Expiration Notification
+
+Automated expiration handling with email and real-time notifications.
+
+```mermaid
+sequenceDiagram
+    participant Mailgun as Mailgun Email
+    participant Auth as Auth Service
+    participant Notif as Notification Service
+    participant FE as Frontend
+
+    Note over Mailgun: On subscription success
+    Mailgun->>Mailgun: Schedule expiration email
+
+    Note over Mailgun: On expiration
+    Mailgun->>Auth: Expiration callback
+    Auth->>Auth: Update subscription status
+    Auth->>Notif: Kafka: JM_SUBSCRIPTION_EXPIRED
+    Notif->>FE: WebSocket: Real-time notification
+    Notif->>Auth: Kafka: JM_SUBSCRIPTION_EXPIRED_REPLY
+```
+
+### Extend Subscription
+
+Renewal flow with email notification update.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant Payment as Payment Service
+    participant Auth as Auth Service
+    participant Mailgun as Mailgun Email
+
+    FE->>Payment: REST: POST /subscribe/extend
+    Payment->>Payment: Process renewal
+    Payment->>Auth: Kafka: JM_SUBSCRIPTION_PAID
+    Auth->>Mailgun: Update expiration schedule
+    Auth->>Payment: Kafka: JM_SUBSCRIPTION_PAID_REPLY
+    Payment->>FE: Response: Subscription extended
+```
+
+### Applicant Profile Update Notification
+
+Notify premium companies when matching applicants update profiles.
+
+```mermaid
+sequenceDiagram
+    participant JA as JA Backend
+    participant JP as Job Post Service
+    participant Auth as Auth Service
+    participant Notif as Notification Service
+    participant FE as Frontend
+
+    JA->>JP: Kafka: JA_PROFILE_ADDED / JA_PROFILE_UPDATED
+    JP->>JP: Match with job posts (skill/country)
+    JP->>Auth: Kafka: JM_PROFILE_MATCHED (with company_ids)
+    Auth->>Auth: Filter premium companies
+    Auth->>Notif: Kafka: JM_APPLICANT_MATCHED
+    Notif->>FE: WebSocket: Real-time notification
+```
+
+---
+
+## Kafka Topics Reference
+
+### JM (Job Manager) Topics
+
+| Topic | Publisher | Consumer | Purpose |
+|-------|-----------|----------|---------|
+| `JM_COMPANY_REGISTRATION` | Auth | Profile | Create company profile |
+| `JM_COMPANY_REGISTRATION_REPLY` | Profile | Auth | Confirm profile created |
+| `JM_LOGO_UPDATED` | Media | Profile | Update logo URL |
+| `JM_APPLICATION_REQUESTED` | Job Post | JA | Request application data |
+| `JM_APPLICATION_REQUESTED_REPLY` | JA | Job Post | Return application data |
+| `JM_APPLICATION_STATUS_UPDATED` | Job Post | JA | Update application status |
+| `JM_APPLICATION_STATUS_UPDATED_REPLY` | JA | Job Post | Confirm status update |
+| `JM_POST_ADDED` | Job Post | JA Notification | New job post notification |
+| `JM_POST_UPDATED` | Job Post | JA Notification | Updated job post notification |
+| `JM_APPLICANT_SEARCH_REQUESTED` | Applicant Discovery | JA | Search applicants |
+| `JM_APPLICANT_SEARCH_REPLY` | JA | Applicant Discovery | Return search results |
+| `JM_SUBSCRIPTION_PAID` | Payment | Auth | Update subscription status |
+| `JM_SUBSCRIPTION_PAID_REPLY` | Auth | Payment | Confirm status update |
+| `JM_SUBSCRIPTION_EXPIRED` | Auth | Notification | Expiration alert |
+| `JM_SUBSCRIPTION_EXPIRED_REPLY` | Notification | Auth | Confirm notification sent |
+| `JM_PROFILE_MATCHED` | Job Post | Auth | Matched company IDs |
+| `JM_APPLICANT_MATCHED` | Auth | Notification | Notify premium companies |
+
+### JA (Job Applicant) Topics
+
+| Topic | Publisher | Consumer | Purpose |
+|-------|-----------|----------|---------|
+| `JA_PROFILE_ADDED` | JA | Job Post | New applicant profile |
+| `JA_PROFILE_UPDATED` | JA | Job Post | Updated applicant profile |
+| `PAYMENT_REQUESTED` | JA | Payment | Applicant payment request |
+| `PAYMENT_REPLIED` | Payment | JA | Payment result |
+
+---
+
+## Related Documentation
+
+- [System Architecture](/technical/architecture)
+- [Backend Components](/technical/backend-components)
+- [Data Model](/technical/data-model)
