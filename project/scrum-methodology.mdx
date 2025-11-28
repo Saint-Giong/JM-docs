@@ -15,15 +15,48 @@ The Saint Giong Job Manager (SGJM) team follows an **Agile development methodolo
 
 ### Board Structure
 
-Our Kanban board is organized into the following columns:
+Our Kanban board is organized into **5 groups** with multiple columns:
 
-| Column | Purpose |
-|--------|---------|
-| **Backlog** | All planned tasks and features awaiting prioritization |
-| **To Do** | Tasks selected for the current sprint |
-| **In Progress** | Tasks actively being worked on |
-| **In Review** | Completed tasks awaiting code review or approval |
-| **Done** | Fully completed and verified tasks |
+<AccordionGroup>
+  <Accordion title="Documents" icon="folder">
+    | Column | Purpose |
+    |--------|---------|
+    | **Documents** | General project documentation and artifacts |
+    | **Meetings Documentation** | Meeting notes and action items |
+    | **Daily Stand-ups** | Daily standup logs and updates |
+  </Accordion>
+
+  <Accordion title="Backlog" icon="list">
+    | Column | Purpose |
+    |--------|---------|
+    | **Product Backlog** | Prioritized list of features and tasks |
+    | **Un-Categorized** | New tasks awaiting categorization |
+  </Accordion>
+
+  <Accordion title="Active" icon="bolt">
+    | Column | Purpose |
+    |--------|---------|
+    | **Next Sprint** | Tasks planned for the upcoming sprint |
+    | **Current Sprint** | Tasks committed to the current sprint |
+    | **In Progress** | Tasks actively being worked on |
+    | **Staging** | Completed tasks deployed to staging environment |
+    | **In Review** | Tasks awaiting code review or approval |
+  </Accordion>
+
+  <Accordion title="Done" icon="check">
+    | Column | Purpose |
+    |--------|---------|
+    | **Done** | Successfully completed and verified tasks |
+    | **Cancelled** | Tasks that were cancelled or deprioritized |
+    | **Duplicated** | Tasks identified as duplicates |
+  </Accordion>
+
+  <Accordion title="Closed" icon="lock">
+    | Column | Purpose |
+    |--------|---------|
+    | **Closed** | Archived tasks from previous sprints |
+  </Accordion>
+</AccordionGroup>
 
 ### Task Categories
 
