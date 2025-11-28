@@ -354,54 +354,63 @@ CREATE TABLE login_attempts (
 
 ## Entity Relationship Diagram
 
-```mermaid
-erDiagram
-    COMPANY ||--o{ JOB_POST : posts
-    COMPANY ||--o{ COMPANY_MEDIA : has
-    COMPANY ||--o| SUBSCRIPTION : subscribes
-    COMPANY ||--o{ SEARCH_PROFILE : creates
+The complete ERD for the Job Manager system illustrates all entities, relationships, and data types across both the Applicant and Company subsystems.
 
-    JOB_POST ||--o{ JOB_SKILL : requires
-    JOB_POST ||--o{ APPLICATION_REFERENCE : receives
+<Frame>
+  <img src="/images/diagrams/erd.png" alt="Entity Relationship Diagram" />
+</Frame>
 
-    SEARCH_PROFILE ||--o{ SEARCH_PROFILE_SKILL : specifies
+### Entity Overview
 
-    SUBSCRIPTION ||--o| PAYMENT_TRANSACTION : paid_by
+The diagram shows the following major entity groups:
 
-    COMPANY {
-        uuid id PK
-        string email UK
-        string password_hash
-        string name
-        string country "SHARD_KEY"
-        boolean is_premium
-        timestamp premium_expires_at
-    }
+<CardGroup cols={2}>
+  <Card title="User Entities" icon="users">
+    - **Applicant** - Job seekers with personal info, biography, and avatar
+    - **ApplicantAuth** - Authentication data (email, password, SSO, role)
+    - **Company** - Employers with company details and branding
+    - **CompanyAuth** - Company authentication credentials
+  </Card>
 
-    JOB_POST {
-        uuid id PK
-        uuid company_id FK
-        string title
-        text description
-        string location
-        boolean is_public
-    }
+  <Card title="Profile & Experience" icon="id-card">
+    - **Education** - Academic background with degree type and GPA
+    - **WorkExperience** - Employment history
+    - **ApplicantMedia** / **CompanyMedia** - Images and videos
+  </Card>
 
-    SUBSCRIPTION {
-        uuid id PK
-        uuid company_id FK
-        string status
-        timestamp end_date
-    }
+  <Card title="Job & Applications" icon="briefcase">
+    - **JobPost** - Job listings with salary, location, and employment type
+    - **JobApplication** - Applications linking applicants to jobs
+    - **SkillTag** - Skills database with junction tables
+  </Card>
 
-    SEARCH_PROFILE {
-        uuid id PK
-        uuid company_id FK
-        string country
-        jsonb employment_types
-        jsonb education_levels
-    }
-```
+  <Card title="Premium & Payments" icon="credit-card">
+    - **Subscription** - Premium subscription management
+    - **Transaction** - Payment records with status tracking
+    - **Company_Applicant_Marker** - Favorite/warning markers
+  </Card>
+</CardGroup>
+
+### Enumerations
+
+| Enum | Values |
+|------|--------|
+| **DegreeType** | BACHELOR, MASTER, DOCTORATE |
+| **MediaType** | IMAGE, VIDEO |
+| **RoleType** | ADMIN, USER |
+| **TransactionStatus** | SUCCESSFUL, FAILED, CANCEL, PENDING |
+| **PaymentMethod** | VISA, EWALLET, CREDIT_CARD |
+| **SubscriptionStatus** | ACTIVE, EXPIRED, CANCELED |
+| **Marker** | FAVORITE, WARNING |
+| **ApplicationStatus** | PENDING, ARCHIVED |
+
+### Search Profiles
+
+The system supports search profiles for both sides:
+- **SearchPostProfile** - Applicant-created profiles for job searches (salary range, employment type, country)
+- **SearchApplicantProfile** - Company-created profiles for candidate searches (salary range, degree level, employment type)
+
+Both profile types link to **SkillTag** through junction tables for skill-based filtering.
 
 ## Data Migration Strategy
 
