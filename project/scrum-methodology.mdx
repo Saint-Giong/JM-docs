@@ -1,0 +1,240 @@
+---
+title: "Scrum Methodology"
+description: "Agile development practices and sprint management for the SGJM team"
+---
+
+## Overview
+
+The Saint Giong Job Manager (SGJM) team follows an **Agile development methodology** combining Scrum and Kanban practices. This hybrid approach enables iterative development, continuous delivery, and flexible task management throughout the project lifecycle.
+
+## Task Management with Tuturuuu
+
+<Card title="Kanban Board" icon="table-columns" href="https://tuturuuu.com/d38c5b88-7e9a-46e3-9752-9cff835eff24/tasks/boards/be15d431-b796-4394-b340-c78890de3e79">
+  Access the team's Kanban board for real-time task tracking and sprint management.
+</Card>
+
+### Board Structure
+
+Our Kanban board is organized into the following columns:
+
+| Column | Purpose |
+|--------|---------|
+| **Backlog** | All planned tasks and features awaiting prioritization |
+| **To Do** | Tasks selected for the current sprint |
+| **In Progress** | Tasks actively being worked on |
+| **In Review** | Completed tasks awaiting code review or approval |
+| **Done** | Fully completed and verified tasks |
+
+### Task Categories
+
+Tasks are categorized by type using labels:
+
+<CardGroup cols={3}>
+  <Card title="Feature" icon="sparkles">
+    New functionality implementation
+  </Card>
+  <Card title="Bug Fix" icon="bug">
+    Defect resolution and corrections
+  </Card>
+  <Card title="Documentation" icon="book">
+    Technical docs and reports
+  </Card>
+  <Card title="Design" icon="palette">
+    UI/UX and architecture design
+  </Card>
+  <Card title="Research" icon="magnifying-glass">
+    Technical investigation and POCs
+  </Card>
+  <Card title="DevOps" icon="server">
+    Infrastructure and deployment
+  </Card>
+</CardGroup>
+
+## Sprint Cadence
+
+### Sprint Duration
+
+<Info>
+  Each sprint runs for **2 weeks**, aligning with bi-weekly reviews with the course lecturer.
+</Info>
+
+### Sprint Ceremonies
+
+| Ceremony | Frequency | Duration | Purpose |
+|----------|-----------|----------|---------|
+| **Sprint Planning** | Start of sprint | 1-2 hours | Define sprint goals and select backlog items |
+| **Daily Standup** | Daily | 15 minutes | Progress updates and blocker identification |
+| **Sprint Review** | End of sprint | 1 hour | Demo completed work to stakeholders |
+| **Retrospective** | End of sprint | 30-45 minutes | Process improvement discussion |
+
+## Development Workflow
+
+### Git Branch Strategy
+
+The team follows a feature branch workflow:
+
+```
+main
+  └── develop
+        ├── feature/auth-sso
+        ├── feature/job-post-crud
+        ├── bugfix/login-validation
+        └── docs/api-reference
+```
+
+### Commit Conventions
+
+<AccordionGroup>
+  <Accordion title="Commit Message Format">
+    All commits follow the conventional commit format:
+
+    ```
+    <type>(<scope>): <description>
+
+    [optional body]
+
+    [optional footer]
+    ```
+
+    **Types:**
+    - `feat`: New feature
+    - `fix`: Bug fix
+    - `docs`: Documentation changes
+    - `style`: Code style/formatting
+    - `refactor`: Code refactoring
+    - `test`: Adding/updating tests
+    - `chore`: Maintenance tasks
+  </Accordion>
+
+  <Accordion title="Commit Frequency Requirements">
+    Team members are expected to:
+
+    - Commit at least **once per working day** when actively developing
+    - Push changes before end of day to enable collaboration
+    - Keep commits atomic and focused on single changes
+    - Reference task IDs in commit messages when applicable
+  </Accordion>
+</AccordionGroup>
+
+### Code Review Process
+
+<Steps>
+  <Step title="Create Pull Request">
+    Developer creates PR from feature branch to develop
+  </Step>
+  <Step title="Assign Reviewers">
+    At least one team member must review the code
+  </Step>
+  <Step title="Address Feedback">
+    Resolve comments and make requested changes
+  </Step>
+  <Step title="Approval & Merge">
+    Once approved, merge using squash merge strategy
+  </Step>
+</Steps>
+
+## Team Agreements
+
+### Working Hours
+
+- Core collaboration hours: **9:00 AM - 5:00 PM (GMT+7)**
+- Flexibility allowed for individual schedules
+- Response expected within **4 hours** during working hours
+
+### Communication Channels
+
+| Channel | Purpose |
+|---------|---------|
+| **Discord** | Real-time team communication and quick discussions |
+| **GitHub Issues** | Technical discussions and bug tracking |
+| **Tuturuuu** | Task management and sprint tracking |
+| **Email** | Formal communications with supervisor |
+
+### Meeting Policy
+
+<Warning>
+  Attendance at all scheduled meetings is **mandatory**.
+</Warning>
+
+**Absence Protocol:**
+- Provide **24-hour advance notice** for planned absences
+- Submit valid justification with supporting evidence
+- Unexcused absences may result in contribution penalties
+
+### Definition of Done
+
+A task is considered **Done** when:
+
+<Checklist>
+- [ ] Code is implemented and follows team standards
+- [ ] Unit tests are written and passing
+- [ ] Code has been reviewed and approved
+- [ ] Documentation is updated (if applicable)
+- [ ] Feature is deployed to staging environment
+- [ ] Acceptance criteria are verified
+</Checklist>
+
+## Sprint Metrics
+
+### Velocity Tracking
+
+The team tracks velocity to improve estimation accuracy:
+
+- **Story Points**: Fibonacci sequence (1, 2, 3, 5, 8, 13)
+- **Velocity**: Average story points completed per sprint
+- **Burndown**: Daily progress visualization
+
+### Quality Metrics
+
+| Metric | Target |
+|--------|--------|
+| Code coverage | > 70% |
+| PR review time | < 24 hours |
+| Bug escape rate | < 5% |
+| Sprint completion | > 85% |
+
+## Continuous Improvement
+
+### Retrospective Format
+
+The team uses the **Start-Stop-Continue** format:
+
+<CardGroup cols={3}>
+  <Card title="Start" icon="play">
+    New practices to adopt
+  </Card>
+  <Card title="Stop" icon="stop">
+    Ineffective practices to eliminate
+  </Card>
+  <Card title="Continue" icon="repeat">
+    Effective practices to maintain
+  </Card>
+</CardGroup>
+
+### Action Items
+
+- Retrospective action items are tracked in Tuturuuu
+- Each item has an assigned owner and due date
+- Progress is reviewed at the next retrospective
+
+## Integration with Squad
+
+### Cross-Team Coordination
+
+The SGJM team coordinates with the SGJA (Job Applicant) team through:
+
+- **Weekly sync meetings** for API integration discussions
+- **Shared Kafka topic definitions** for event-driven communication
+- **Joint sprint reviews** for integrated feature demos
+
+### Shared Resources
+
+- Common design system (`bamboo-ui`)
+- Unified API documentation
+- Shared database sharding strategy
+
+## Related Documentation
+
+- [Team Structure](/project/team)
+- [Project Milestones](/project/milestones)
+- [Meeting Minutes](/project/meetings)

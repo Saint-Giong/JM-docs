@@ -26,7 +26,8 @@
             "pages": [
               "project/overview",
               "project/team",
-              "project/milestones"
+              "project/milestones",
+              "project/scrum-methodology"
             ]
           },
           {
