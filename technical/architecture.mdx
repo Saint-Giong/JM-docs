@@ -274,12 +274,36 @@ public void createJobPost(JobPostRequest request) {
   View detailed C4 component diagrams for all 7 frontend feature modules, including Signup, Login, Dashboard, Profile, Subscription, Job Post, and Applicant Search.
 </Card>
 
+## System Context Diagram
+
+The C4 System Context diagram provides a high-level view of the Job Manager system and its interactions with external actors and systems.
+
+<Frame>
+  <img src="/images/diagrams/System_Context_Diagram.png" alt="System Context Diagram" />
+</Frame>
+
+### Context Overview
+
+<CardGroup cols={2}>
+  <Card title="Primary Actors" icon="users">
+    - **Company Recruiters** - Create and manage job posts
+    - **Job Applicants** - Search and apply for jobs
+    - **System Administrators** - Manage platform operations
+  </Card>
+  <Card title="External Systems" icon="arrow-right-arrow-left">
+    - **Job Applicant (JA) System** - Candidate management subsystem
+    - **Payment Gateway** - Stripe for premium subscriptions
+    - **Identity Providers** - Google OAuth for SSO
+    - **Email Service** - Mailgun for notifications
+  </Card>
+</CardGroup>
+
 ## Backend Container Diagram
 
 The Job Manager backend follows a microservices architecture with clear separation of concerns. Each service has its own bounded context, database, and communicates via REST APIs and Kafka events.
 
 <Frame>
-  <img src="/images/diagrams/backend/Container.drawio.png" alt="Backend Container Diagram" />
+  <img src="/images/diagrams/backend/JM_BE_Container.png" alt="Backend Container Diagram" />
 </Frame>
 
 ### Container Overview
@@ -393,6 +417,44 @@ Company Profile data is distributed across **5 geographic shards** based on popu
 <Card title="Backend Component Diagrams" icon="diagram-project" href="/technical/backend-components">
   View detailed C4 component diagrams for all 8 microservices, including Kafka topics, external integrations, and internal module structures.
 </Card>
+
+## Frontend Container Diagram
+
+The Job Manager frontend is a Next.js application following a Headless UI architecture, separating business logic from presentation components.
+
+<Frame>
+  <img src="/images/diagrams/frontend/JM_FE_Container.png" alt="Frontend Container Diagram" />
+</Frame>
+
+### Frontend Architecture
+
+<CardGroup cols={2}>
+  <Card title="Core Framework" icon="react">
+    - **Next.js** - React framework with SSR/SSG
+    - **TanStack Query** - Server state management
+    - **TanStack Router** - Type-safe routing
+    - **Zustand** - Client state management
+  </Card>
+  <Card title="UI Layer" icon="palette">
+    - **bamboo-ui** - Shared component library
+    - **Shadcn/ui** - Headless UI primitives
+    - **Tailwind CSS** - Utility-first styling
+    - **Radix UI** - Accessible components
+  </Card>
+  <Card title="Feature Modules" icon="grid">
+    - Authentication (Signup, Login)
+    - Dashboard & Profile Management
+    - Job Post Management
+    - Applicant Search & Discovery
+    - Subscription & Payment
+  </Card>
+  <Card title="Infrastructure" icon="gear">
+    - **Fetcher Utilities** - API communication
+    - **Constants Manager** - Configuration
+    - **Validation Schemas** - Zod-based validation
+    - **WebSocket Client** - Real-time notifications
+  </Card>
+</CardGroup>
 
 ## Communication Patterns
 
