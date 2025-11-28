@@ -1,0 +1,392 @@
+---
+title: "Backend Components"
+description: "C4 component diagrams for all Job Manager microservices"
+---
+
+## Overview
+
+The Job Manager backend is decomposed into 8 microservices, each with a dedicated bounded context. This page provides detailed C4 component diagrams for each service.
+
+<Info>
+  All microservices follow a consistent internal architecture with **API Module** (interfaces, DTOs) and **Service Module** (business logic, repositories).
+</Info>
+
+## Container Diagram
+
+The complete backend container diagram showing all microservices, databases, Kafka messaging, and external system integrations.
+
+<Frame>
+  <img src="/images/diagrams/backend/Container.drawio.png" alt="Backend Container Diagram" />
+</Frame>
+
+### System Components
+
+<CardGroup cols={2}>
+  <Card title="Infrastructure Layer" icon="layer-group">
+    - **API Gateway** (Spring Cloud Gateway)
+    - **Service Discovery** (Eureka)
+    - **Kafka Cluster** for event streaming
+    - **Redis** for token caching
+  </Card>
+  <Card title="Core Microservices" icon="cubes">
+    - Company Auth Service
+    - Company Profile Service
+    - Job Post Service
+    - Payment Service
+  </Card>
+  <Card title="Supporting Services" icon="puzzle-piece">
+    - Company Media Service
+    - Notification Service
+    - Applicant Discovery Service
+    - Skill Tag Service
+  </Card>
+  <Card title="External Systems" icon="arrow-right-arrow-left">
+    - Job Applicant (JA) Backend
+    - External Payment Service (Stripe)
+    - Google Authentication
+    - Email Service (Mailgun)
+    - Media File Storage (S3/GCS)
+  </Card>
+</CardGroup>
+
+## Common Components
+
+All microservices share these foundational architectural elements:
+
+<AccordionGroup>
+  <Accordion title="Filter & Security Component">
+    Spring Boot security filter that validates all incoming requests originate from the API Gateway, preventing unauthorized direct access to internal services.
+  </Accordion>
+  <Accordion title="API Module Structure">
+    Encapsulates **External** elements (exposed interfaces/DTOs) and **Internal** elements (module-private). Only External elements are accessible to other services.
+
+    ```
+    api-module/
+    ├── external/
+    │   ├── Interface.java      # Public API contract
+    │   └── DTO.java            # External data transfer
+    └── internal/
+        ├── Interface.java      # Private API contract
+        └── DTO.java            # Internal data transfer
+    ```
+  </Accordion>
+  <Accordion title="Service Module Structure">
+    Contains `@Service` components for business logic and `@Repository` components for database operations.
+
+    ```
+    service-module/
+    ├── Controller.java         # REST endpoints
+    ├── Service.java            # Business logic
+    ├── Repository.java         # Database queries
+    └── Model.java              # Entity definitions
+    ```
+  </Accordion>
+  <Accordion title="Kafka Configuration">
+    Defines producer/consumer configurations with topics and Avro schemas for event messaging. All reply topics follow the pattern `{TOPIC}_REPLIED`.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Company Authentication Service
+
+Handles company registration, login, SSO integration, and premium subscription status management.
+
+<Frame>
+  <img src="/images/diagrams/backend/Components-Company Auth.png" alt="Company Auth Component Diagram" />
+</Frame>
+
+### Communication
+
+<Tabs>
+  <Tab title="Incoming Events">
+    | Source | Topic | Purpose |
+    |--------|-------|---------|
+    | JA Backend | `JA_PROFILE_MATCHED` | New/updated applicants matching job posts |
+    | Payment Service | `JM_SUBSCRIPTION_PAID` | Update premium status after payment |
+  </Tab>
+  <Tab title="Outgoing Events">
+    | Target | Topic | Purpose |
+    |--------|-------|---------|
+    | Notification Service | `JM_SUBSCRIPTION_EXPIRED` | Trigger expiration notifications |
+    | Notification Service | `JM_APPLICANT_MATCHED` | Notify premium companies of matches |
+  </Tab>
+  <Tab title="External Services">
+    - **Google Authentication** - OAuth 2.0 for SSO login
+    - **Mailgun Email API** - Subscription expiration emails
+    - **Redis Token Cache** - Store/validate access and refresh tokens
+  </Tab>
+</Tabs>
+
+### Key Components
+
+| Component | Responsibility |
+|-----------|---------------|
+| Company Auth Controller | REST endpoints for login, register, logout |
+| Company Auth Service | Authentication business logic |
+| Company Auth Repository | User credential persistence |
+| Redis Config | Token cache configuration |
+| Kafka Config | Event publishing/consumption |
+
+---
+
+## Company Profile Service
+
+Manages company profile CRUD operations with geographic database sharding.
+
+<Frame>
+  <img src="/images/diagrams/backend/Components-Company Profile.png" alt="Company Profile Component Diagram" />
+</Frame>
+
+### Communication
+
+<Tabs>
+  <Tab title="Incoming Events">
+    | Source | Topic | Purpose |
+    |--------|-------|---------|
+    | Company Media Service | `JM_LOGO_UPDATED` | Update logoUrl in profile |
+    | Company Auth Service | `JM_COMPANY_REGISTRATION` | Create new profile record |
+  </Tab>
+  <Tab title="Database Sharding">
+    Connects to multiple profile database shards based on company country:
+
+    | Shard | Region |
+    |-------|--------|
+    | Shard 1 | Africa |
+    | Shard 2 | Europe |
+    | Shard 3 | Americas |
+    | Shard 4 | East Asia |
+    | Shard 5 | South/SE Asia & Pacific |
+  </Tab>
+</Tabs>
+
+### Key Components
+
+| Component | Responsibility |
+|-----------|---------------|
+| Company Profile Controller | REST endpoints for profile CRUD |
+| Company Profile Service | Profile business logic |
+| Company Profile Repository | Shard-aware data persistence |
+| Kafka Config | Event consumption for updates |
+
+---
+
+## Job Post Service
+
+Core recruitment engine handling job lifecycle and JA Backend integration.
+
+<Frame>
+  <img src="/images/diagrams/backend/Components-JobPost.png" alt="Job Post Component Diagram" />
+</Frame>
+
+### Communication
+
+<Tabs>
+  <Tab title="Incoming Events">
+    | Source | Topic | Purpose |
+    |--------|-------|---------|
+    | JA Backend | `JA_PROFILE_UPDATED` | Trigger premium notifications |
+    | JA Backend | `GET_JOBS_REQUESTED` | Job filtering for JA searches |
+    | JA Backend | `ADMIN_{ACTION}_JOB_POST_REQUESTED` | Admin CRUD operations |
+  </Tab>
+  <Tab title="Outgoing Events">
+    | Target | Topic | Purpose |
+    |--------|-------|---------|
+    | Auth Service | `JM_PROFILE_MATCHED` | Matching company IDs for notifications |
+    | JA Backend | `JM_JOB_POST_UPDATED` | Notify premium applicants |
+    | JA Backend | `JM_APPLICATION_{ACTION}_REQUESTED` | Get/update application info |
+  </Tab>
+</Tabs>
+
+### Key Components
+
+| Component | Responsibility |
+|-----------|---------------|
+| Job Post Controller | REST endpoints for job CRUD |
+| Job Post Service | Job lifecycle business logic |
+| Job Post Repository | Job data persistence |
+| Job Post Model | Job entity with skill tags |
+| Kafka Config | Cross-system event messaging |
+
+---
+
+## Payment Service
+
+Handles premium subscription payments via Stripe integration.
+
+<Frame>
+  <img src="/images/diagrams/backend/Components-Payment.png" alt="Payment Component Diagram" />
+</Frame>
+
+### Communication
+
+<Tabs>
+  <Tab title="Incoming Events">
+    | Source | Topic | Purpose |
+    |--------|-------|---------|
+    | JA Backend | `PAYMENT_REQUESTED` | Premium subscription from applicants |
+  </Tab>
+  <Tab title="Outgoing Events">
+    | Target | Topic | Purpose |
+    |--------|-------|---------|
+    | Company Auth Service | `JM_SUBSCRIPTION_PAID` | Update premium status |
+  </Tab>
+  <Tab title="External Services">
+    - **Stripe** - Third-party payment processing
+    - **Transaction Database** - Financial audit trail
+  </Tab>
+</Tabs>
+
+### Key Components
+
+| Component | Responsibility |
+|-----------|---------------|
+| Payment Controller | REST endpoints for payment initiation |
+| Payment Service | Payment processing business logic |
+| Payment Repository | Transaction record persistence |
+| Payment Model | Transaction entity |
+| Kafka Config | Payment event messaging |
+
+---
+
+## Company Media Service
+
+Manages media file uploads (logos, images, videos) with cloud storage.
+
+<Frame>
+  <img src="/images/diagrams/backend/Components-Company Media.png" alt="Company Media Component Diagram" />
+</Frame>
+
+### Communication
+
+<Tabs>
+  <Tab title="Outgoing Events">
+    | Target | Topic | Purpose |
+    |--------|-------|---------|
+    | Company Profile Service | `JM_LOGO_UPDATED` | Update logo URL in profile |
+  </Tab>
+  <Tab title="External Services">
+    - **AWS S3 / Google Cloud Storage** - Media file storage
+    - Supports `IMAGE` and `VIDEO` media types
+  </Tab>
+</Tabs>
+
+### Key Components
+
+| Component | Responsibility |
+|-----------|---------------|
+| Company Media Controller | REST endpoints for media CRUD |
+| Company Media Service | File upload business logic |
+| Company Media Repository | Media metadata persistence |
+| Company Media Model | Media entity with type enum |
+| Kafka Config | Logo update event publishing |
+
+---
+
+## Notification Service
+
+Processes notification events and delivers real-time alerts via WebSocket.
+
+<Frame>
+  <img src="/images/diagrams/backend/Components-Notification.png" alt="Notification Component Diagram" />
+</Frame>
+
+### Communication
+
+<Tabs>
+  <Tab title="Incoming Events">
+    | Source | Topic | Purpose |
+    |--------|-------|---------|
+    | Auth Service | `JM_SUBSCRIPTION_EXPIRED` | Expired subscription alerts |
+    | Job Post Service | `JM_APPLICANT_MATCHED` | New applicant match alerts |
+  </Tab>
+  <Tab title="Delivery Channels">
+    - **WebSocket** - Real-time push notifications to frontend
+    - **Notification Database** - Persist for offline users
+    - Manages `isRead` status for UI indicators
+  </Tab>
+</Tabs>
+
+### Key Components
+
+| Component | Responsibility |
+|-----------|---------------|
+| Notification Controller | REST endpoints for notification retrieval |
+| Notification Service | Alert processing business logic |
+| Notification Repository | Notification persistence |
+| Notification Model | Notification entity with read status |
+| WebSocket | Real-time delivery system |
+| Kafka Config | Event consumption |
+
+---
+
+## Applicant Discovery Service
+
+Handles premium company search profiles and applicant search requests.
+
+<Frame>
+  <img src="/images/diagrams/backend/Components-Applicant Discovery.png" alt="Applicant Discovery Component Diagram" />
+</Frame>
+
+### Communication
+
+<Tabs>
+  <Tab title="REST APIs">
+    - Search Profile CRUD for premium companies
+    - Applicant search requests with filters
+    - Full-text search across applicant profiles
+  </Tab>
+  <Tab title="Outgoing Events">
+    | Target | Topic | Purpose |
+    |--------|-------|---------|
+    | JA Backend | `JM_APPLICANT_SEARCH_REQUESTED` | Get applicant data for Full-Text Search |
+  </Tab>
+</Tabs>
+
+### Key Components
+
+| Component | Responsibility |
+|-----------|---------------|
+| Applicant Discovery Controller | REST endpoints for search |
+| Applicant Discovery Service | Search orchestration logic |
+| Applicant Discovery Repository | Search profile persistence |
+| Applicant Discovery Model | Search profile entity |
+| Kafka Config | Cross-system search requests |
+
+---
+
+## Skill Tag Service
+
+Maintains the centralized master list of technical skills shared across the platform.
+
+<Frame>
+  <img src="/images/diagrams/backend/Components-SkillTag.png" alt="Skill Tag Component Diagram" />
+</Frame>
+
+<Info>
+  The Skill Tag Service is the **source of truth** for skill taxonomy. Both JM and JA backends retrieve tags via REST API to ensure consistent skill matching.
+</Info>
+
+### Key Responsibilities
+
+- CRUD operations for skill tags
+- Provide autocomplete suggestions for job posts
+- Ensure unified taxonomy across job posts and applicant profiles
+- Expose REST API for JA Backend consumption
+
+### Key Components
+
+| Component | Responsibility |
+|-----------|---------------|
+| Skill Tag Controller | REST endpoints for tag CRUD |
+| Skill Tag Service | Tag management business logic |
+| Skill Tag Repository | Tag data persistence |
+| Skill Tag Model | Tag entity |
+
+---
+
+## Related Documentation
+
+- [System Architecture](/technical/architecture)
+- [Data Model](/technical/data-model)
+- [Deployment](/technical/deployment)

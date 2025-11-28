@@ -62,6 +62,7 @@
             "group": "Technical",
             "pages": [
               "technical/architecture",
+              "technical/backend-components",
               "technical/data-model",
               "technical/deployment"
             ]

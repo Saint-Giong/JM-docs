@@ -270,6 +270,60 @@ public void createJobPost(JobPostRequest request) {
   </Accordion>
 </AccordionGroup>
 
+## Backend Container Diagram
+
+The Job Manager backend follows a microservices architecture with clear separation of concerns. Each service has its own bounded context, database, and communicates via REST APIs and Kafka events.
+
+<Frame>
+  <img src="/images/diagrams/backend/Container.drawio.png" alt="Backend Container Diagram" />
+</Frame>
+
+### Container Overview
+
+<CardGroup cols={2}>
+  <Card title="Infrastructure Layer" icon="layer-group">
+    - **API Gateway** (Spring Cloud Gateway)
+    - **Service Discovery** (Eureka)
+    - **Kafka Cluster** for event streaming
+    - **Redis** for token caching
+  </Card>
+  <Card title="Core Microservices" icon="cubes">
+    - Company Auth Service
+    - Company Profile Service
+    - Job Post Service
+    - Payment Service
+  </Card>
+  <Card title="Supporting Services" icon="puzzle-piece">
+    - Company Media Service
+    - Notification Service
+    - Applicant Discovery Service
+    - Skill Tag Service
+  </Card>
+  <Card title="External Systems" icon="arrow-right-arrow-left">
+    - Job Applicant (JA) Backend
+    - External Payment Service (Stripe)
+    - Google Authentication
+    - Email Service (Mailgun)
+    - Media File Storage (S3/GCS)
+  </Card>
+</CardGroup>
+
+### Database Sharding
+
+Company Profile data is distributed across **5 geographic shards** based on population density:
+
+| Shard | Region | Coverage |
+|-------|--------|----------|
+| Shard 1 | Africa | All African nations |
+| Shard 2 | Europe | European nations |
+| Shard 3 | Americas | North and South America |
+| Shard 4 | East Asia | China and surrounding countries |
+| Shard 5 | South/SE Asia & Pacific | India, ASEAN, Australia, Pacific |
+
+<Card title="Backend Component Diagrams" icon="diagram-project" href="/technical/backend-components">
+  View detailed C4 component diagrams for all 8 microservices, including Kafka topics, external integrations, and internal module structures.
+</Card>
+
 ## Communication Patterns
 
 ### Synchronous - REST API
