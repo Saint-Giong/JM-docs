@@ -48,6 +48,7 @@
           {
             "group": "Features",
             "pages": [
+              "features/ui-mockups",
               "features/authentication",
               "features/profile-management",
               "features/job-management",
