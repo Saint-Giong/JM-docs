@@ -401,6 +401,269 @@ sequenceDiagram
 
 ---
 
+## Error Handling Flows
+
+This section documents how the system handles failures, retries, and error recovery across different scenarios.
+
+### Authentication Failure Flow
+
+Handles invalid credentials, account lockout, and token expiration.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant Auth as Auth Service
+    participant Cache as Redis Cache
+    participant DB as Auth Database
+
+    FE->>Auth: REST: POST /login
+    Auth->>DB: Verify credentials
+
+    alt Invalid Credentials
+        Auth->>DB: Increment failed_attempts
+        alt attempts >= 5
+            Auth->>DB: Set account locked
+            Auth->>FE: 401: Account Locked
+        else attempts < 5
+            Auth->>FE: 401: Invalid Credentials
+        end
+    else Token Expired
+        FE->>Auth: REST: POST /refresh
+        Auth->>Cache: Validate refresh_token
+        alt Refresh Token Valid
+            Auth->>Auth: Generate new tokens
+            Auth->>Cache: Update tokens
+            Auth->>FE: 200: New tokens
+        else Refresh Token Invalid/Expired
+            Auth->>FE: 401: Session Expired
+            FE->>FE: Redirect to Login
+        end
+    end
+```
+
+### Kafka Message Failure & Retry Flow
+
+Handles message delivery failures with exponential backoff retry.
+
+```mermaid
+sequenceDiagram
+    participant Pub as Publisher Service
+    participant Kafka as Kafka Broker
+    participant DLQ as Dead Letter Queue
+    participant Con as Consumer Service
+
+    Pub->>Kafka: Publish message
+    Kafka->>Con: Deliver message
+
+    alt Processing Success
+        Con->>Con: Process message
+        Con->>Kafka: Acknowledge
+    else Processing Failure
+        Con->>Con: Log error
+        Con->>Kafka: Negative Acknowledge
+        Note over Kafka: Retry with exponential backoff
+
+        loop Max 3 retries
+            Kafka->>Con: Redeliver message
+            alt Success
+                Con->>Kafka: Acknowledge
+            else Failure
+                Con->>Kafka: Negative Acknowledge
+            end
+        end
+
+        alt All retries exhausted
+            Kafka->>DLQ: Move to Dead Letter Queue
+            DLQ->>DLQ: Store for manual review
+        end
+    end
+```
+
+### Payment Failure Flow
+
+Handles payment processing failures and rollback.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant Payment as Payment Service
+    participant Stripe as Stripe API
+    participant Auth as Auth Service
+    participant DB as Transaction DB
+
+    FE->>Payment: REST: POST /subscribe
+    Payment->>DB: Create pending transaction
+    Payment->>Stripe: Process payment
+
+    alt Payment Declined
+        Stripe->>Payment: Error: Card Declined
+        Payment->>DB: Update status: FAILED
+        Payment->>FE: 400: Payment Declined
+    else Stripe Timeout
+        Stripe--xPayment: Timeout
+        Payment->>DB: Update status: PENDING
+        Payment->>FE: 202: Processing
+        Note over Payment: Webhook will confirm status
+    else Stripe Error
+        Stripe->>Payment: Error: Service Error
+        Payment->>DB: Update status: FAILED
+        Payment->>FE: 500: Payment Service Error
+    else Success
+        Stripe->>Payment: Success
+        Payment->>DB: Update status: SUCCESS
+        Payment->>Auth: Kafka: JM_SUBSCRIPTION_PAID
+
+        alt Kafka Delivery Failure
+            Payment->>Payment: Queue for retry
+            Note over Payment: Retry with exponential backoff
+        end
+
+        Payment->>FE: 200: Subscription Active
+    end
+```
+
+### Cross-Shard Query Failure Flow
+
+Handles failures when querying across database shards.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant Profile as Profile Service
+    participant S1 as Shard 1 (Africa)
+    participant S2 as Shard 2 (Europe)
+    participant S3 as Shard 3 (Americas)
+
+    FE->>Profile: REST: GET /companies/global-search
+
+    par Query All Shards
+        Profile->>S1: Query shard 1
+        Profile->>S2: Query shard 2
+        Profile->>S3: Query shard 3
+    end
+
+    alt All Shards Respond
+        S1->>Profile: Results
+        S2->>Profile: Results
+        S3->>Profile: Results
+        Profile->>Profile: Merge results
+        Profile->>FE: 200: Combined results
+    else Partial Failure
+        S1->>Profile: Results
+        S2--xProfile: Timeout/Error
+        S3->>Profile: Results
+        Profile->>Profile: Merge available results
+        Profile->>FE: 206: Partial results (degraded)
+        Note over FE: Display warning about incomplete data
+    else Total Failure
+        S1--xProfile: Timeout
+        S2--xProfile: Error
+        S3--xProfile: Timeout
+        Profile->>FE: 503: Service Unavailable
+    end
+```
+
+### WebSocket Notification Failure Flow
+
+Handles real-time notification delivery failures.
+
+```mermaid
+sequenceDiagram
+    participant Kafka as Kafka
+    participant Notif as Notification Service
+    participant WS as WebSocket Server
+    participant FE as Frontend
+    participant DB as Notification DB
+
+    Kafka->>Notif: JM_APPLICANT_MATCHED
+    Notif->>DB: Persist notification
+    Notif->>WS: Push to client
+
+    alt Client Connected
+        WS->>FE: WebSocket: Notification
+        FE->>FE: Display real-time alert
+    else Client Disconnected
+        WS--xNotif: Connection closed
+        Notif->>DB: Mark as undelivered
+        Note over DB: Stored for retrieval on reconnect
+
+        FE->>Notif: REST: GET /notifications (on reconnect)
+        Notif->>DB: Fetch undelivered
+        Notif->>FE: 200: Pending notifications
+        FE->>FE: Display missed notifications
+    end
+```
+
+### Service Circuit Breaker Pattern
+
+Prevents cascade failures when dependent services are unavailable.
+
+```mermaid
+sequenceDiagram
+    participant Caller as Calling Service
+    participant CB as Circuit Breaker
+    participant Target as Target Service
+
+    Note over CB: State: CLOSED (normal)
+
+    loop Normal Operations
+        Caller->>CB: Request
+        CB->>Target: Forward request
+        Target->>CB: Response
+        CB->>Caller: Response
+    end
+
+    Note over CB: Failures accumulate
+
+    loop Failures > Threshold
+        Caller->>CB: Request
+        CB->>Target: Forward request
+        Target--xCB: Error/Timeout
+        CB->>CB: Increment failure count
+        CB->>Caller: Error response
+    end
+
+    Note over CB: State: OPEN (tripped)
+
+    loop Circuit Open
+        Caller->>CB: Request
+        CB->>Caller: Fast fail (no call to Target)
+    end
+
+    Note over CB: After timeout period
+    Note over CB: State: HALF-OPEN (testing)
+
+    Caller->>CB: Request
+    CB->>Target: Test request
+
+    alt Target Recovered
+        Target->>CB: Success
+        CB->>CB: Reset failure count
+        Note over CB: State: CLOSED
+        CB->>Caller: Success
+    else Target Still Failing
+        Target--xCB: Error
+        Note over CB: State: OPEN
+        CB->>Caller: Error
+    end
+```
+
+### Error Response Codes
+
+| Scenario | HTTP Code | Error Code | Recovery Action |
+|----------|-----------|------------|-----------------|
+| Invalid credentials | 401 | `INVALID_CREDENTIALS` | Retry with correct credentials |
+| Account locked | 401 | `ACCOUNT_LOCKED` | Wait 15 minutes or contact support |
+| Token expired | 401 | `TOKEN_EXPIRED` | Refresh token or re-login |
+| Validation error | 400 | `VALIDATION_ERROR` | Fix input and retry |
+| Payment declined | 400 | `PAYMENT_DECLINED` | Try different payment method |
+| Resource not found | 404 | `NOT_FOUND` | Check resource ID |
+| Rate limited | 429 | `RATE_LIMITED` | Wait and retry with backoff |
+| Service unavailable | 503 | `SERVICE_UNAVAILABLE` | Retry after delay |
+| Partial data | 206 | `PARTIAL_CONTENT` | Proceed with warning |
+
+---
+
 ## Kafka Topics Reference
 
 ### JM (Job Manager) Topics

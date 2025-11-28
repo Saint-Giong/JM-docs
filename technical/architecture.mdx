@@ -312,6 +312,72 @@ The Job Manager backend follows a microservices architecture with clear separati
   </Card>
 </CardGroup>
 
+### Container Descriptions
+
+<AccordionGroup>
+  <Accordion title="API Gateway & Service Discovery">
+    The **API Gateway** acts as the centralized entry point for the entire JM backend. Its responsibility is to accept incoming REST requests over HTTPS from the frontend system and route them to the appropriate microservices. It works in conjunction with **Service Discovery** (Eureka) to dynamically resolve the network locations of backend instances, ensuring that external clients interact with a stable interface regardless of internal infrastructure changes.
+  </Accordion>
+
+  <Accordion title="Company Authentication Service">
+    Responsible for identity management and orchestration of company registration workflows. Upon receiving login requests via REST, it generates JWE tokens and interacts directly with the **Token Cache (Redis)** to store and validate access and refresh tokens. For new account creation, the service publishes an asynchronous event to the Company Profile Service to create the initial company record and waits for confirmation. It also manages subscription states by consuming payment confirmation events and integrates with external email services for subscription expiration alerts.
+
+    **Kafka Topics:**
+    - Publishes: `JM_SUBSCRIPTION_EXPIRED`, `JM_COMPANY_REGISTRATION`
+    - Consumes: `JM_PROFILE_MATCHED`, `JM_SUBSCRIPTION_PAID`
+  </Accordion>
+
+  <Accordion title="Company Profile Service">
+    Manages persistence and retrieval of core company information and "Applicant Marker" statuses. To handle data on a global scale, it connects to a cluster of **Company Profile database shards**, distributing data storage geographically. This service operates asynchronously to maintain data consistency; it consumes registration events from Company Auth Service to create initial records and listens for media update events from Company Media Service to automatically refresh logo URLs.
+
+    **Database:** `profile_db_shard_[1-5]` (5 geographic shards)
+
+    **Kafka Topics:**
+    - Consumes: `JM_LOGO_UPDATED`, `JM_COMPANY_REGISTRATION`
+  </Accordion>
+
+  <Accordion title="Job Post Service">
+    Acts as the central recruitment engine, handling the lifecycle of job advertisements and serving as the primary bridge to the JA Backend. When a manager views applications, this container sends an asynchronous retrieval request to the JA Backend and awaits a reply. Similarly, when application status changes, it synchronizes with the JA Backend. It also broadcasts real-time notification events to alert applicants when relevant job posts are created or updated.
+
+    **Kafka Topics:**
+    - Publishes: `JM_PROFILE_MATCHED`, `JM_JOB_POST_UPDATED`, `JM_APPLICATION_{ACTION}_REQUESTED`
+    - Consumes: `JA_PROFILE_UPDATED`, `GET_JOBS_REQUESTED`, `ADMIN_{ACTION}_JOB_POST_REQUESTED`
+  </Accordion>
+
+  <Accordion title="Company Media Service">
+    Handles upload and management of rich media assets (logos, images, videos). Instead of storing binaries internally, it interfaces directly with external media file storage (Google Cloud Storage) to upload files. Once a company's logo is successfully uploaded, it publishes an event to Company Profile Service to update the profile record with the new public URL.
+
+    **Kafka Topics:**
+    - Publishes: `JM_LOGO_UPDATED`
+  </Accordion>
+
+  <Accordion title="Applicant Discovery Service">
+    Dedicated to processing search queries initiated by company managers. It accepts search filter parameters via REST and forwards queries to the JA Backend by publishing asynchronous search requests. It then waits for and consumes search results, aggregating data to return comprehensive result sets. Additionally, this service manages a dedicated **Discovery Database** to store and manage saved search profiles for premium users.
+
+    **Kafka Topics:**
+    - Publishes: `JM_APPLICANT_SEARCH_REQUESTED`
+  </Accordion>
+
+  <Accordion title="Payment Service">
+    Isolates all financial transaction logic and acts as the secure interface for the **External Payment Service (Stripe)**. It processes premium subscription requests and, upon successful transaction, publishes events to Company Authentication Service to upgrade account status. It also supports the JA Backend by consuming applicant-side payment requests and sending back transaction results.
+
+    **Kafka Topics:**
+    - Publishes: `JM_SUBSCRIPTION_PAID`
+    - Consumes: `PAYMENT_REQUESTED`
+  </Accordion>
+
+  <Accordion title="Notification Service">
+    Aggregates system-wide events to generate real-time alerts for company managers. It monitors critical business events such as subscription expiration alerts from Company Auth Service. It also listens to applicant match events from Job Post Service to instantly notify managers when candidates fit their job criteria. For immediate delivery, it integrates with a dedicated **WebSocket System** to push notifications as events are processed.
+
+    **Kafka Topics:**
+    - Consumes: `JM_SUBSCRIPTION_EXPIRED`, `JM_APPLICANT_MATCHED`
+  </Accordion>
+
+  <Accordion title="Skill Tag Service">
+    Maintains the centralized master list of technical skills and qualifications used to standardize data across the platform. It exposes REST APIs for the frontend to retrieve available tags, enabling consistent skill requirements when creating job posts. It handles lifecycle and persistence in its dedicated **Skill Tag Database** and serves as the source of truth for the external JA Backend, which makes direct REST calls to retrieve the standardized tag list.
+  </Accordion>
+</AccordionGroup>
+
 ### Database Sharding
 
 Company Profile data is distributed across **5 geographic shards** based on population density:
@@ -398,51 +464,229 @@ graph TD
   </Tab>
 </Tabs>
 
-## Design Quality Attributes
+## Architecture Design Rationale
 
-### Maintainability
+The following sections provide detailed justifications for our architectural decisions across key quality attributes, including advantages and trade-offs.
 
-- Clear bounded contexts per service
-- Consistent REST conventions
-- Comprehensive API documentation
-- Typed DTOs and interfaces
+### Data Model Justification
 
-### Extensibility
+<AccordionGroup>
+  <Accordion title="Maintainability">
+    **Advantages:**
+    - By separating `CompanyAuth` (credentials) from `Company` (business details), we follow the Single Responsibility Principle. The Edit Profile feature only accesses the Company table, avoiding accidental changes to authentication logic stored in CompanyAuth.
+    - The use of associative entities like `JobPost_SkillTag` instead of comma-separated strings ensures Third Normal Form (3NF) compliance.
 
-- New features in isolated services
-- Backward-compatible API changes
-- Event-driven additions via Kafka
-- Plugin architecture for payments
+    **Trade-offs:**
+    - High normalization makes it harder to get a full view of a resource without complex JOIN operations. For example, displaying job post details requires joining JobPost, JobPost_SkillTag, SkillTag, and Company tables.
+  </Accordion>
 
-### Resilience
+  <Accordion title="Extensibility">
+    **Advantages:**
+    - The `CompanyMedia` entity uses a MediaType Enum, making it easy to support new media formats (e.g., VR_TOUR, PDF_BROCHURE) by adding enum values.
+    - The `SkillTag` entity serves as a separate dictionary that can be bulk-imported without modifying JobPost or Profile tables.
 
-- Circuit breakers (Resilience4j)
-- Retry policies
-- Graceful degradation
-- Health checks per service
+    **Trade-offs:**
+    - The Bitmap data type for `employmentType` is efficient for storage and querying but difficult to extend with complex metadata. Database-level Enums require schema changes (DDL) to add new options.
+  </Accordion>
 
-### Scalability
+  <Accordion title="Resilience">
+    **Advantages:**
+    - The `CompanyNotification` entity ensures data persistence. Unlike in-memory stores, saving notifications to the database prevents loss of critical alerts during service crashes.
+    - UUID Primary Keys enable collision-free ID generation in distributed environments without a central ID generator.
 
-- Horizontal scaling per service
-- Database sharding
-- Kafka for async processing
-- Redis caching
+    **Trade-offs:**
+    - The JM system copies parts of Applicant profiles (SearchApplicantProfile) for the search feature. If synchronization fails, this data becomes stale, creating state consistency challenges.
+  </Accordion>
 
-### Security
+  <Accordion title="Scalability">
+    **Advantages:**
+    - The Country entity as a partition key enables horizontal database sharding, preventing single-shard overload and maintaining performance across regions.
 
-- JWE encrypted tokens
-- Token revocation in Redis
-- Input validation (frontend + backend)
-- Least-privilege service accounts
-- HTTPS everywhere
+    **Trade-offs:**
+    - Country-based sharding complicates global analytics. Getting total Job Posts globally requires querying every shard and combining results in the application layer.
+  </Accordion>
 
-### Performance
+  <Accordion title="Security">
+    **Advantages:**
+    - Storing `hashedPassword` and `ssoProvider` in the CompanyAuth table minimizes attack surface. Query injection vulnerabilities in public Company Search endpoints only expose profile data, not credentials.
+    - The Transaction entity is managed by the Payment Service, keeping sensitive financial information separate from public profile views.
 
-- Full-text search indexes
-- Shard-aware queries
-- Lazy loading and pagination
-- Client and server caching
-- CDN for static assets
+    **Trade-offs:**
+    - Access Control Logic often requires ownership checks via joins across CompanyAuth, Company, and JobPost. Developers may be tempted to cache permissions unsafely under high load. The CompanyAuth table still contains email (PII), requiring strict encryption-at-rest.
+  </Accordion>
+
+  <Accordion title="Performance">
+    **Advantages:**
+    - The `employmentType` Bitmap enables direct bitwise AND/OR operations, making multi-status queries much faster than string comparisons or lookup table joins.
+    - Storing `logoUrl` directly in the Company table (denormalization) prevents an extra JOIN query when displaying job cards.
+
+    **Trade-offs:**
+    - Normalized schema requires JOINs that can consume database CPU under high load when joining JobPost, Company, and SkillTags for every search result.
+  </Accordion>
+</AccordionGroup>
+
+### Frontend Architecture Justification
+
+<AccordionGroup>
+  <Accordion title="Maintainability">
+    **Advantages:**
+    - The Headless UI pattern strictly separates logic, visuals, and business context. We can modify business logic (e.g., form submission states in HeadlessFormHook) without risking regression in the visual layer (HeadlessUIForm).
+    - Pervasive use of TypeScript and Zod creates a self-documenting codebase with strictly defined data structures.
+
+    **Trade-offs:**
+    - High modularity results in fragmentation. A single feature like "Signin" spans multiple files (Page, Service, Schema, UI, Hook), potentially increasing cognitive load and file navigation for new developers.
+  </Accordion>
+
+  <Accordion title="Extensibility">
+    **Advantages:**
+    - The composition model allows high-level pages to assemble reusable feature components. Adding "Microsoft SSO" requires only reusing existing HeadlessButton and HeadlessButtonHook with new branding parameters.
+    - Expanding taxonomy (e.g., adding "Remote vs. On-site" filter) is immediate via generic HeadlessSelect and HeadlessTagInput components.
+
+    **Trade-offs:**
+    - Abstraction leaks may occur if future requirements demand specific UI behavior the base HeadlessHook doesn't support, potentially requiring base hook refactoring and regression testing.
+  </Accordion>
+
+  <Accordion title="Resilience">
+    **Advantages:**
+    - Centralized Fetcher Utilities ensure network failures are caught and handled gracefully in a single location, preventing cascading failures.
+    - ValidateSchema components prevent invalid inputs from triggering network requests, protecting the backend from bad data.
+
+    **Trade-offs:**
+    - Heavy reliance on client-side execution means validation and error handling may fail if users' devices block scripts or fail to parse the JavaScript bundle.
+  </Accordion>
+
+  <Accordion title="Scalability">
+    **Advantages:**
+    - The reusable bamboo-ui library and modular feature components ensure JavaScript bundle size grows slowly as features expand.
+    - Modularity enables parallel development across team members without merge conflicts.
+
+    **Trade-offs:**
+    - Feature complexity can lead to "prop drilling" issues without global state management solutions like Zustand or Redux.
+  </Accordion>
+
+  <Accordion title="Security">
+    **Advantages:**
+    - Zod schemas for forms intercept potentially malicious scripts or SQL injection attempts at the browser level.
+    - The Fetcher Utility automatically handles JWE/JWS header attachment, preventing accidental token exposure.
+
+    **Trade-offs:**
+    - Frontend validation provides only a first line of defense. Client-side restrictions can be bypassed with tools like Postman; the backend must rigorously re-validate all incoming data.
+  </Accordion>
+
+  <Accordion title="Performance">
+    **Advantages:**
+    - Headless UI maximizes rendering efficiency using standard HTML elements with minimal state logic.
+    - TailwindCSS ensures minimal CSS bundles by purging unused styles.
+    - Optimistic UI patterns improve perceived speed (e.g., instantly removing a deleted Job Post while the API request processes).
+
+    **Trade-offs:**
+    - Rich interactivity incurs hydration costs. Users on slow connections may experience a brief "uncanny valley" where buttons are visible but not yet clickable.
+  </Accordion>
+</AccordionGroup>
+
+### Backend Architecture Justification
+
+<AccordionGroup>
+  <Accordion title="Maintainability">
+    **Advantages:**
+    - Standardized Layered Architecture (Controller - Service - Repository) within each microservice allows developers to isolate business logic from data access code.
+    - Contract Stability via distinct Internal and External DTOs ensures refactoring internal schemas doesn't break consumer code.
+    - Bounded Contexts allow independent maintenance and deployment of specific functionalities.
+
+    **Trade-offs:**
+    - Distributed design introduces debugging complexity. Tracking failed requests requires correlating logs across API Gateway, microservices, and Kafka broker.
+  </Accordion>
+
+  <Accordion title="Extensibility">
+    **Advantages:**
+    - Event-Driven Integration via Kafka allows adding new features (e.g., Analytics Service) by adding consumers to existing topics without modifying source services.
+    - Dynamic Discovery via Eureka ensures new service instances are automatically registered without manual configuration.
+
+    **Trade-offs:**
+    - Avro schema reliance requires strict schema evolution management. Modifying event structures without backward compatibility risks breaking downstream consumers.
+    - Granular architecture means even small features require multiple files across layers and Kafka topic configuration.
+  </Accordion>
+
+  <Accordion title="Resilience">
+    **Advantages:**
+    - **Fault Isolation:** Each domain runs in its own container with dedicated resources. If the Notification Service crashes, core flows (Authentication, Job Posting) remain unaffected. In a monolith, any module issue would crash the entire application.
+    - **Asynchronous Buffering:** Kafka serves as a durability buffer. If the JA Backend goes offline, events queue in Kafka and process automatically upon recovery.
+
+    **Trade-offs:**
+    - Infrastructure dependency introduces single points of failure. Platform functionality depends on API Gateway and Kafka Cluster uptime.
+    - Asynchronous operations mean eventual consistency; data may be temporarily out of sync between services.
+  </Accordion>
+
+  <Accordion title="Scalability">
+    **Advantages:**
+    - **Geo-Sharding:** Company Profile Database is sharded across five geographic regions, distributing write load across nodes.
+    - **Media Offloading:** Google Cloud Storage handles large binary files, keeping application servers lightweight.
+
+    **Trade-offs:**
+    - Sharding complicates global queries. Reports requiring all five shards need expensive in-memory aggregation.
+    - Running dedicated containers for Gateway, Discovery, Config, Kafka, and five database shards requires significant baseline resources.
+  </Accordion>
+
+  <Accordion title="Security">
+    **Advantages:**
+    - **Real-Time Token Revocation:** Redis cache stores JWE token revocation status. Unlike stateless JWTs, we can maintain a "Blocklist" for immediate session termination on logout, password change, or account compromise.
+    - **Domain Isolation:** Separate Authentication Services for JA and JM systems provide security boundaries. A DDoS attack on the public-facing Applicant side doesn't compromise Manager operations.
+
+    **Trade-offs:**
+    - Access/Refresh token flow increases frontend complexity. The client must intercept 401 responses, pause requests, exchange refresh tokens, and retry original requests.
+  </Accordion>
+
+  <Accordion title="Performance">
+    **Advantages:**
+    - **Non-Blocking Operations:** Asynchronous processing via Kafka allows APIs to return immediate responses while heavy tasks process in the background.
+    - **High-Speed Session Access:** Redis in-memory cache ensures sub-millisecond latency for session validation on every request.
+
+    **Trade-offs:**
+    - Microservices introduce network latency. Single requests may traverse Gateway, Auth Service, and Business Service, adding latency compared to monolithic in-memory calls.
+    - Continuous JSON (REST) and Avro (Kafka) serialization consumes CPU cycles, impacting throughput under extreme loads.
+  </Accordion>
+</AccordionGroup>
+
+## Design Quality Summary
+
+<CardGroup cols={3}>
+  <Card title="Maintainability" icon="wrench">
+    - Clear bounded contexts per service
+    - Consistent REST conventions
+    - Typed DTOs and interfaces
+    - Standardized layering
+  </Card>
+  <Card title="Extensibility" icon="puzzle-piece">
+    - Event-driven additions via Kafka
+    - Dynamic service discovery
+    - Plugin architecture for payments
+    - Backward-compatible APIs
+  </Card>
+  <Card title="Resilience" icon="shield">
+    - Circuit breakers (Resilience4j)
+    - Fault isolation per service
+    - Async buffering via Kafka
+    - Health checks per service
+  </Card>
+  <Card title="Scalability" icon="arrows-up-down">
+    - Horizontal scaling per service
+    - Database sharding (5 regions)
+    - Redis caching
+    - Media offloading to GCS
+  </Card>
+  <Card title="Security" icon="lock">
+    - JWE encrypted tokens
+    - Token revocation in Redis
+    - Domain isolation
+    - Input validation (FE + BE)
+  </Card>
+  <Card title="Performance" icon="bolt">
+    - Full-text search indexes
+    - Shard-aware queries
+    - Lazy loading and pagination
+    - Non-blocking operations
+  </Card>
+</CardGroup>
 
 ## Technology Stack
 

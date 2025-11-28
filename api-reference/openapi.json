@@ -1,16 +1,25 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "OpenAPI Plant Store",
-    "description": "A sample API that uses a plant store as an example to demonstrate features in the OpenAPI specification",
+    "title": "DEVision Job Manager API",
+    "description": "API for the Job Manager subsystem of the DEVision job portal platform. Provides endpoints for company registration, authentication, profile management, job posting, applicant search, and premium subscriptions.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "SaintGiong JM Team",
+      "email": "support@devision.io"
+    },
     "license": {
       "name": "MIT"
-    },
-    "version": "1.0.0"
+    }
   },
   "servers": [
     {
-      "url": "http://sandbox.mintlify.com"
+      "url": "https://api.devision.io/jm/v1",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost:8080/api/v1",
+      "description": "Development server"
     }
   ],
   "security": [
@@ -18,37 +27,58 @@
       "bearerAuth": []
     }
   ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Company registration, login, and token management"
+    },
+    {
+      "name": "Profile",
+      "description": "Company profile management"
+    },
+    {
+      "name": "Jobs",
+      "description": "Job post lifecycle management"
+    },
+    {
+      "name": "Subscription",
+      "description": "Premium subscription and payments"
+    },
+    {
+      "name": "Search",
+      "description": "Applicant search functionality"
+    }
+  ],
   "paths": {
-    "/plants": {
-      "get": {
-        "description": "Returns all plants from the system that the user has access to",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "The maximum number of results to return",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
+    "/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register new company",
+        "description": "Create a new company account with email and password",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
             }
           }
-        ],
+        },
         "responses": {
-          "200": {
-            "description": "Plant response",
+          "201": {
+            "description": "Company registered successfully",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Plant"
-                  }
+                  "$ref": "#/components/schemas/AuthResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Unexpected error",
+            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
@@ -56,35 +86,9 @@
                 }
               }
             }
-          }
-        }
-      },
-      "post": {
-        "description": "Creates a new plant in the store",
-        "requestBody": {
-          "description": "Plant to add to the store",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewPlant"
-              }
-            }
           },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "plant response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Plant"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "unexpected error",
+          "409": {
+            "description": "Email already exists",
             "content": {
               "application/json": {
                 "schema": {
@@ -96,28 +100,35 @@
         }
       }
     },
-    "/plants/{id}": {
-      "delete": {
-        "description": "Deletes a single plant based on the ID supplied",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "ID of plant to delete",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Login with credentials",
+        "description": "Authenticate company with email and password",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
             }
           }
-        ],
+        },
         "responses": {
-          "204": {
-            "description": "Plant deleted",
-            "content": {}
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
           },
-          "400": {
-            "description": "unexpected error",
+          "401": {
+            "description": "Invalid credentials",
             "content": {
               "application/json": {
                 "schema": {
@@ -128,25 +139,302 @@
           }
         }
       }
-    }
-  },
-  "webhooks": {
-    "/plant/webhook": {
+    },
+    "/auth/logout": {
       "post": {
-        "description": "Information about a new plant added to the store",
+        "tags": ["Authentication"],
+        "summary": "Logout and revoke tokens",
+        "description": "Revoke access and refresh tokens",
+        "responses": {
+          "204": {
+            "description": "Logout successful"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/companies/{companyId}/profile": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Get company profile",
+        "description": "Retrieve company profile details",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyProfile"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Company not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Profile"],
+        "summary": "Update company profile",
+        "description": "Update company profile details",
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
-          "description": "Plant added to the store",
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NewPlant"
+                "$ref": "#/components/schemas/UpdateProfileRequest"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Return a 200 status to indicate that the data was received successfully"
+            "description": "Profile updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyProfile"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs": {
+      "get": {
+        "tags": ["Jobs"],
+        "summary": "List company job posts",
+        "description": "Get all job posts for the authenticated company",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job posts retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobPostList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Jobs"],
+        "summary": "Create job post",
+        "description": "Create a new job posting",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateJobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Job post created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobPost"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/{jobId}": {
+      "get": {
+        "tags": ["Jobs"],
+        "summary": "Get job post",
+        "description": "Get job post details by ID",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job post retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobPost"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Jobs"],
+        "summary": "Update job post",
+        "description": "Update job post details",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateJobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Job post updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobPost"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Jobs"],
+        "summary": "Delete job post",
+        "description": "Delete a job post",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Job post deleted"
+          }
+        }
+      }
+    },
+    "/subscriptions/status": {
+      "get": {
+        "tags": ["Subscription"],
+        "summary": "Get subscription status",
+        "description": "Get current subscription status for the authenticated company",
+        "responses": {
+          "200": {
+            "description": "Subscription status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/subscriptions/checkout": {
+      "post": {
+        "tags": ["Subscription"],
+        "summary": "Initiate checkout",
+        "description": "Start premium subscription checkout process",
+        "responses": {
+          "200": {
+            "description": "Checkout session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutSession"
+                }
+              }
+            }
           }
         }
       }
@@ -154,54 +442,330 @@
   },
   "components": {
     "schemas": {
-      "Plant": {
-        "required": [
-          "name"
-        ],
+      "RegisterRequest": {
         "type": "object",
+        "required": ["email", "password", "name", "country"],
         "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          },
           "name": {
-            "description": "The name of the plant",
             "type": "string"
           },
-          "tag": {
-            "description": "Tag to specify the type",
+          "country": {
+            "type": "string"
+          },
+          "phone": {
             "type": "string"
           }
         }
       },
-      "NewPlant": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/Plant"
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
           },
-          {
-            "required": [
-              "id"
-            ],
-            "type": "object",
-            "properties": {
-              "id": {
-                "description": "Identification number of the plant",
-                "type": "integer",
-                "format": "int64"
-              }
-            }
+          "password": {
+            "type": "string"
           }
-        ]
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer"
+          },
+          "company": {
+            "$ref": "#/components/schemas/CompanyProfile"
+          }
+        }
+      },
+      "CompanyProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "street": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "aboutUs": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string"
+          },
+          "isPremium": {
+            "type": "boolean"
+          },
+          "premiumExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateProfileRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "street": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "aboutUs": {
+            "type": "string"
+          }
+        }
+      },
+      "JobPost": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "employmentTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["FULL_TIME", "PART_TIME", "INTERNSHIP", "CONTRACT"]
+            }
+          },
+          "salaryMin": {
+            "type": "number"
+          },
+          "salaryMax": {
+            "type": "number"
+          },
+          "salaryCurrency": {
+            "type": "string"
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isPublic": {
+            "type": "boolean"
+          },
+          "postedDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiryDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateJobRequest": {
+        "type": "object",
+        "required": ["title", "description", "location"],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "employmentTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "salaryMin": {
+            "type": "number"
+          },
+          "salaryMax": {
+            "type": "number"
+          },
+          "salaryCurrency": {
+            "type": "string",
+            "default": "USD"
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expiryDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateJobRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "employmentTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "salaryMin": {
+            "type": "number"
+          },
+          "salaryMax": {
+            "type": "number"
+          },
+          "isPublic": {
+            "type": "boolean"
+          }
+        }
+      },
+      "JobPostList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobPost"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "SubscriptionStatus": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["FREE", "ACTIVE", "EXPIRED", "CANCELLED"]
+          },
+          "plan": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "price": {
+            "type": "number"
+          }
+        }
+      },
+      "CheckoutSession": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "redirectUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
       },
       "Error": {
-        "required": [
-          "error",
-          "message"
-        ],
         "type": "object",
         "properties": {
           "error": {
-            "type": "integer",
-            "format": "int32"
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object"
+              }
+            }
           },
-          "message": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "path": {
             "type": "string"
           }
         }
@@ -210,7 +774,8 @@
     "securitySchemes": {
       "bearerAuth": {
         "type": "http",
-        "scheme": "bearer"
+        "scheme": "bearer",
+        "bearerFormat": "JWE"
       }
     }
   }

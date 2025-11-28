@@ -9,18 +9,115 @@ The data model for the Job Manager subsystem is designed to support all function
 
 ## Sharding Strategy
 
-<Card title="Sharding Key: Country" icon="database">
-User and company data is partitioned across database shards based on the **Country** field to:
-- Optimize location-based searches
-- Improve query performance
-- Enable geographic data distribution
-- Facilitate compliance with data residency requirements
+<Card title="Geo-Population Based Sharding" icon="database">
+User and company data is partitioned across database shards using a **Geo-Population Based Sharding Strategy**. The system uses the **Country** of the Company as the primary determinant for sharding, but distributes data based on population density to prevent hotspots.
 </Card>
 
-**Shard Distribution:**
-- **Shard 1:** Vietnam
-- **Shard 2:** Singapore
-- **Shard 3:** Other countries
+### Shard Distribution (5 Geographic Shards)
+
+To prevent data hotspots caused by population variance (e.g., India and China in the same Asia shard would overload it), the system uses a custom routing strategy based on world population data:
+
+| Shard | Region | Coverage |
+|-------|--------|----------|
+| **Shard 1** | Africa | All African nations |
+| **Shard 2** | Europe | European nations |
+| **Shard 3** | Americas | North and South America |
+| **Shard 4** | East Asia | China and surrounding East Asian countries |
+| **Shard 5** | South/SE Asia & Pacific | India, ASEAN nations, Australia, and Pacific |
+
+### Sharding Logic and Routing
+
+The routing mechanism is implemented via a **dynamic DataSourceRouter** within the Spring Boot application layer.
+
+<AccordionGroup>
+  <Accordion title="Context Switching">
+    The router intercepts every database transaction, extracts the `shardId` from the Country JSON object to determine which shard to access, and routes to it.
+
+    ```java
+    @Component
+    public class DynamicDataSourceRouter extends AbstractRoutingDataSource {
+        @Override
+        protected Object determineCurrentLookupKey() {
+            String country = ShardContextHolder.getCurrentCountry();
+            return ShardResolver.resolveShardId(country);
+        }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Shard Resolution">
+    For new registrations or unauthenticated queries, a static `ShardResolver` utility maps the input Country to the corresponding Shard ID (1–5) based on the defined grouping logic. This ensures write operations land on the correct shard without requiring a global lookup table.
+
+    ```java
+    public class ShardResolver {
+        public static int resolveShardId(String country) {
+            if (AFRICAN_COUNTRIES.contains(country)) return 1;
+            if (EUROPEAN_COUNTRIES.contains(country)) return 2;
+            if (AMERICAN_COUNTRIES.contains(country)) return 3;
+            if (EAST_ASIAN_COUNTRIES.contains(country)) return 4;
+            return 5; // South/SE Asia & Pacific (default)
+        }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Country Data Structure">
+    The `country` attribute is stored as an entity attribute containing the country code and shardId for efficient routing:
+
+    ```json
+    {
+      "code": "VN",
+      "name": "Vietnam",
+      "dialCode": "+84",
+      "shardId": 5
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Data Migration Logic
+
+Since the Country shard key is mutable, whenever there is an update in the country property, physical migration might be processed to relocate the user's data.
+
+<Tabs>
+  <Tab title="Same Shard Migration">
+    If the profile updates the country field to another country in the **same shard region** (e.g., from Vietnam to Singapore, both in Shard 5), the system performs a basic `UPDATE` query in the database.
+
+    ```sql
+    UPDATE companies
+    SET country = '{"code": "SG", "name": "Singapore", "shardId": 5}'
+    WHERE id = :companyId;
+    ```
+  </Tab>
+  <Tab title="Cross-Shard Migration">
+    If the profile updates the country field to another country in a **different shard region** (e.g., from Vietnam to Germany), the system utilizes a **Distributed Transaction**:
+
+    1. **Insert** the record into the new targeted shard (Shard 2 - Europe)
+    2. **Verify** data integrity in the new shard
+    3. **Delete** the record from the original shard (Shard 5)
+    4. **Commit** both transactions atomically
+
+    ```java
+    @Transactional
+    public void migrateCompanyToNewShard(UUID companyId, String newCountry) {
+        Company company = findById(companyId);
+        int oldShardId = company.getCountry().getShardId();
+        int newShardId = ShardResolver.resolveShardId(newCountry);
+
+        if (oldShardId != newShardId) {
+            // Cross-shard migration required
+            insertToShard(company, newShardId);
+            deleteFromShard(companyId, oldShardId);
+        } else {
+            // Same shard - simple update
+            updateCountry(companyId, newCountry);
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+This strategy ensures that the database load is distributed more evenly based on actual user population density rather than geographical landmass, optimizing search performance and system resilience.
 
 ## Core Entities
 

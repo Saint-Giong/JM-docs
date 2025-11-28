@@ -1,33 +1,230 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: 'API Introduction'
+description: 'DEVision Job Manager API Reference Documentation'
 ---
 
-<Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
-</Note>
+## Overview
 
-## Welcome
+The DEVision Job Manager API provides programmatic access to company registration, authentication, profile management, job posting, applicant search, and premium subscription features. This API is designed for the Job Manager subsystem of the DEVision job portal platform.
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/api-reference/endpoint/auth">
+    Company registration, login, SSO, and token management
+  </Card>
+  <Card title="Company Profile" icon="building" href="/api-reference/endpoint/profile">
+    Profile CRUD operations and media management
+  </Card>
+  <Card title="Job Posts" icon="briefcase" href="/api-reference/endpoint/jobs">
+    Job lifecycle management and application tracking
+  </Card>
+  <Card title="Subscription" icon="credit-card" href="/api-reference/endpoint/subscription">
+    Premium subscriptions and payment processing
+  </Card>
+</CardGroup>
 
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+## Base URL
+
+All API requests should be made to the following base URL:
+
+```
+https://api.devision.io/jm/v1
+```
+
+For development and testing:
+
+```
+http://localhost:8080/api/v1
+```
 
 ## Authentication
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+The DEVision API uses **JWE (JSON Web Encryption)** tokens for authentication. All authenticated endpoints require a valid Bearer token in the Authorization header.
+
+### Token Format
+
+```http
+Authorization: Bearer <jwe_token>
+```
+
+### Token Lifecycle
+
+<Steps>
+  <Step title="Login/Register">
+    Authenticate via credentials or SSO to receive access and refresh tokens
+  </Step>
+  <Step title="Access Token">
+    Short-lived token (15 minutes) for API requests
+  </Step>
+  <Step title="Refresh Token">
+    Long-lived token (7 days) to obtain new access tokens
+  </Step>
+  <Step title="Token Revocation">
+    Tokens can be revoked on logout or security events via Redis blocklist
+  </Step>
+</Steps>
+
+### Security Scheme
 
 ```json
-"security": [
-  {
-    "bearerAuth": []
+{
+  "securitySchemes": {
+    "bearerAuth": {
+      "type": "http",
+      "scheme": "bearer",
+      "bearerFormat": "JWE"
+    }
   }
-]
+}
 ```
+
+## Error Response Format
+
+All API errors follow a consistent format:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Email format is invalid",
+    "details": {
+      "field": "email",
+      "constraint": "must be a valid email address"
+    }
+  },
+  "timestamp": "2025-11-28T10:30:00Z",
+  "path": "/api/v1/auth/register"
+}
+```
+
+### Error Codes
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `VALIDATION_ERROR` | 400 | Request validation failed |
+| `UNAUTHORIZED` | 401 | Invalid or expired token |
+| `FORBIDDEN` | 403 | Insufficient permissions |
+| `NOT_FOUND` | 404 | Resource not found |
+| `CONFLICT` | 409 | Resource already exists |
+| `RATE_LIMITED` | 429 | Too many requests |
+| `INTERNAL_ERROR` | 500 | Server error |
+
+## Rate Limiting
+
+API requests are rate-limited to ensure fair usage:
+
+| Tier | Requests per Minute | Burst Limit |
+|------|---------------------|-------------|
+| Free | 60 | 10 |
+| Premium | 300 | 50 |
+
+Rate limit headers are included in all responses:
+
+```http
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 45
+X-RateLimit-Reset: 1701234567
+```
+
+## API Versioning
+
+The API uses URL-based versioning. The current version is `v1`:
+
+```
+/api/v1/auth/login
+/api/v1/companies/{id}/profile
+/api/v1/jobs/{id}
+```
+
+## Content Types
+
+All requests and responses use JSON:
+
+```http
+Content-Type: application/json
+Accept: application/json
+```
+
+For file uploads (media), use multipart form data:
+
+```http
+Content-Type: multipart/form-data
+```
+
+## Pagination
+
+List endpoints support cursor-based pagination:
+
+```json
+{
+  "data": [...],
+  "pagination": {
+    "limit": 20,
+    "offset": 0,
+    "total": 150,
+    "hasMore": true
+  }
+}
+```
+
+Query parameters:
+- `limit` - Number of items per page (default: 20, max: 100)
+- `offset` - Number of items to skip
+
+## API Endpoints Overview
+
+### Authentication
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/register` | Register new company |
+| POST | `/auth/login` | Login with credentials |
+| POST | `/auth/sso/google` | Google SSO authentication |
+| POST | `/auth/logout` | Revoke tokens |
+| POST | `/auth/refresh` | Refresh access token |
+
+### Company Profile
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/companies/{id}/profile` | Get company profile |
+| PUT | `/companies/{id}/profile` | Update company profile |
+| POST | `/companies/{id}/media` | Upload media files |
+| DELETE | `/companies/{id}/media/{mediaId}` | Delete media |
+
+### Job Posts
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/jobs` | List company job posts |
+| POST | `/jobs` | Create job post |
+| GET | `/jobs/{id}` | Get job post details |
+| PUT | `/jobs/{id}` | Update job post |
+| DELETE | `/jobs/{id}` | Delete job post |
+| GET | `/jobs/{id}/applications` | List applications |
+| PATCH | `/jobs/{id}/applications/{appId}` | Update application status |
+
+### Subscription
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/subscriptions/status` | Get subscription status |
+| POST | `/subscriptions/checkout` | Initiate payment |
+| POST | `/subscriptions/webhook` | Stripe webhook handler |
+
+### Search
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/search/applicants` | Search applicants (Premium) |
+| GET | `/search/profiles` | List saved search profiles |
+| POST | `/search/profiles` | Create search profile |
+
+<Info>
+  Detailed request/response schemas for each endpoint will be added in Milestone 2 implementation phase.
+</Info>
+
+## Related Documentation
+
+- [System Architecture](/technical/architecture)
+- [Backend Components](/technical/backend-components)
+- [System Flows](/technical/system-flows)

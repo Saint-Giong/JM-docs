@@ -55,10 +55,28 @@ All microservices share these foundational architectural elements:
 
 <AccordionGroup>
   <Accordion title="Filter & Security Component">
-    Spring Boot security filter that validates all incoming requests originate from the API Gateway, preventing unauthorized direct access to internal services.
+    Spring Boot security filter that validates all incoming requests originate from the API Gateway, preventing unauthorized direct access to internal services. This filter intercepts every incoming request to verify it originated from our API Gateway, maintaining the secured connection of our internal network and preventing outer requests.
+
+    ```java
+    @Component
+    public class GatewayOriginFilter extends OncePerRequestFilter {
+        @Override
+        protected void doFilterInternal(HttpServletRequest request,
+                                        HttpServletResponse response,
+                                        FilterChain chain) {
+            String gatewayHeader = request.getHeader("X-Gateway-Origin");
+            if (isValidGatewayOrigin(gatewayHeader)) {
+                chain.doFilter(request, response);
+            } else {
+                response.sendError(HttpStatus.FORBIDDEN.value());
+            }
+        }
+    }
+    ```
   </Accordion>
+
   <Accordion title="API Module Structure">
-    Encapsulates **External** elements (exposed interfaces/DTOs) and **Internal** elements (module-private). Only External elements are accessible to other services.
+    Encapsulates **External** elements (exposed interfaces/DTOs) and **Internal** elements (module-private). Only External elements are exposed to other modules and microservices while Internal data remains isolated. This enforces strict encapsulation and the Separation of Concerns principle.
 
     ```
     api-module/
@@ -70,8 +88,9 @@ All microservices share these foundational architectural elements:
         └── DTO.java            # Internal data transfer
     ```
   </Accordion>
+
   <Accordion title="Service Module Structure">
-    Contains `@Service` components for business logic and `@Repository` components for database operations.
+    Contains `@Service` components for business logic and `@Repository` components for database operations. The Service module contains the core business logic of the microservice, ensuring modular architecture and ease of maintenance.
 
     ```
     service-module/
@@ -81,10 +100,60 @@ All microservices share these foundational architectural elements:
     └── Model.java              # Entity definitions
     ```
   </Accordion>
+
   <Accordion title="Kafka Configuration">
-    Defines producer/consumer configurations with topics and Avro schemas for event messaging. All reply topics follow the pattern `{TOPIC}_REPLIED`.
+    Defines producer/consumer configurations with topics and Avro schemas for event messaging.
+
+    **Request-Reply Pattern:**
+    Every Kafka communication follows the Request-Reply pattern which includes two Kafka topics:
+    - A **Publisher topic** to trigger the request process
+    - A **Consumer topic** to get the reply result (follows pattern `{TOPIC}_REPLIED`)
+
+    ```java
+    @Configuration
+    public class KafkaConfig {
+        @Bean
+        public ProducerFactory<String, Object> producerFactory() {
+            Map<String, Object> props = new HashMap<>();
+            props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+            props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
+            return new DefaultKafkaProducerFactory<>(props);
+        }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Redis Configuration">
+    Exclusively implemented within the Auth Microservice to handle seamless authentication access. Redis is used as an in-memory storage to cache `auth_token` and `refresh_token` for authenticated users, significantly reducing latency during token validation by skipping queries to the primary database.
+
+    ```java
+    @Configuration
+    public class RedisConfig {
+        @Bean
+        public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
+            RedisTemplate<String, Object> template = new RedisTemplate<>();
+            template.setConnectionFactory(factory);
+            template.setKeySerializer(new StringRedisSerializer());
+            template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+            return template;
+        }
+    }
+    ```
   </Accordion>
 </AccordionGroup>
+
+### Kafka Communication Convention
+
+All frontend communication requests are directed to the API Gateway. The frontend does not communicate directly with microservices. Instead, it sends RESTful requests to the Gateway, which then verifies, identifies, and routes these requests to the corresponding microservice.
+
+```mermaid
+graph LR
+    FE[Frontend] -->|REST/HTTPS| GW[API Gateway]
+    GW --> SD[Service Discovery]
+    SD --> MS[Microservice]
+    MS -->|Publish| KF[Kafka Topic]
+    KF -->|Consume| MS2[Target Microservice]
+```
 
 ---
 
