@@ -27,13 +27,13 @@ The DEVision Job Manager API provides programmatic access to company registratio
 All API requests should be made to the following base URL:
 
 ```
-https://api.devision.io/jm/v1
+https://api.jm.saintgiong.ttr.gg/api/v1/sgjm
 ```
 
 For development and testing:
 
 ```
-http://localhost:8080/api/v1
+http://localhost:8080/api/v1/sgjm
 ```
 
 ## Authentication
@@ -130,9 +130,9 @@ X-RateLimit-Reset: 1701234567
 The API uses URL-based versioning. The current version is `v1`:
 
 ```
-/api/v1/auth/login
-/api/v1/companies/{id}/profile
-/api/v1/jobs/{id}
+/api/v1/sgjm/auth/login
+/api/v1/sgjm/companies/{id}/profile
+/api/v1/sgjm/jobs/{id}
 ```
 
 ## Content Types
@@ -176,48 +176,48 @@ Query parameters:
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/auth/register` | Register new company |
-| POST | `/auth/login` | Login with credentials |
-| POST | `/auth/sso/google` | Google SSO authentication |
-| POST | `/auth/logout` | Revoke tokens |
-| POST | `/auth/refresh` | Refresh access token |
+| POST | `/api/v1/sgjm/auth/register` | Register new company |
+| POST | `/api/v1/sgjm/auth/login` | Login with credentials |
+| POST | `/api/v1/sgjm/auth/sso/google` | Google SSO authentication |
+| POST | `/api/v1/sgjm/auth/logout` | Revoke tokens |
+| POST | `/api/v1/sgjm/auth/refresh` | Refresh access token |
 
 ### Company Profile
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/companies/{id}/profile` | Get company profile |
-| PUT | `/companies/{id}/profile` | Update company profile |
-| POST | `/companies/{id}/media` | Upload media files |
-| DELETE | `/companies/{id}/media/{mediaId}` | Delete media |
+| GET | `/api/v1/sgjm/companies/{id}/profile` | Get company profile |
+| PUT | `/api/v1/sgjm/companies/{id}/profile` | Update company profile |
+| POST | `/api/v1/sgjm/companies/{id}/media` | Upload media files |
+| DELETE | `/api/v1/sgjm/companies/{id}/media/{mediaId}` | Delete media |
 
 ### Job Posts
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/jobs` | List company job posts |
-| POST | `/jobs` | Create job post |
-| GET | `/jobs/{id}` | Get job post details |
-| PUT | `/jobs/{id}` | Update job post |
-| DELETE | `/jobs/{id}` | Delete job post |
-| GET | `/jobs/{id}/applications` | List applications |
-| PATCH | `/jobs/{id}/applications/{appId}` | Update application status |
+| GET | `/api/v1/sgjm/jobs` | List company job posts |
+| POST | `/api/v1/sgjm/jobs` | Create job post |
+| GET | `/api/v1/sgjm/jobs/{id}` | Get job post details |
+| PUT | `/api/v1/sgjm/jobs/{id}` | Update job post |
+| DELETE | `/api/v1/sgjm/jobs/{id}` | Delete job post |
+| GET | `/api/v1/sgjm/jobs/{id}/applications` | List applications |
+| PATCH | `/api/v1/sgjm/jobs/{id}/applications/{appId}` | Update application status |
 
 ### Subscription
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/subscriptions/status` | Get subscription status |
-| POST | `/subscriptions/checkout` | Initiate payment |
-| POST | `/subscriptions/webhook` | Stripe webhook handler |
+| GET | `/api/v1/sgjm/subscriptions/status` | Get subscription status |
+| POST | `/api/v1/sgjm/subscriptions/checkout` | Initiate payment |
+| POST | `/api/v1/sgjm/subscriptions/webhook` | Stripe webhook handler |
 
 ### Search
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/search/applicants` | Search applicants (Premium) |
-| GET | `/search/profiles` | List saved search profiles |
-| POST | `/search/profiles` | Create search profile |
+| POST | `/api/v1/sgjm/search/applicants` | Search applicants (Premium) |
+| GET | `/api/v1/sgjm/search/profiles` | List saved search profiles |
+| POST | `/api/v1/sgjm/search/profiles` | Create search profile |
 
 <Info>
   Detailed request/response schemas for each endpoint will be added in Milestone 2 implementation phase.

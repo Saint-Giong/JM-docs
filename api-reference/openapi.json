@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "contact": {
       "name": "SaintGiong JM Team",
-      "email": "support@devision.io"
+      "email": "support@jm.saintgiong.ttr.gg"
     },
     "license": {
       "name": "MIT"
@@ -14,11 +14,11 @@
   },
   "servers": [
     {
-      "url": "https://api.devision.io/jm/v1",
+      "url": "https://api.jm.saintgiong.ttr.gg/api/v1/sgjm",
       "description": "Production server"
     },
     {
-      "url": "http://localhost:8080/api/v1",
+      "url": "http://localhost:8080/api/v1/sgjm",
       "description": "Development server"
     }
   ],
@@ -50,9 +50,11 @@
     }
   ],
   "paths": {
-    "/auth/register": {
+    "/api/v1/sgjm/auth/register": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "summary": "Register new company",
         "description": "Create a new company account with email and password",
         "security": [],
@@ -100,9 +102,11 @@
         }
       }
     },
-    "/auth/login": {
+    "/api/v1/sgjm/auth/login": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "summary": "Login with credentials",
         "description": "Authenticate company with email and password",
         "security": [],
@@ -140,9 +144,11 @@
         }
       }
     },
-    "/auth/logout": {
+    "/api/v1/sgjm/auth/logout": {
       "post": {
-        "tags": ["Authentication"],
+        "tags": [
+          "Authentication"
+        ],
         "summary": "Logout and revoke tokens",
         "description": "Revoke access and refresh tokens",
         "responses": {
@@ -162,9 +168,11 @@
         }
       }
     },
-    "/companies/{companyId}/profile": {
+    "/api/v1/sgjm/companies/{companyId}/profile": {
       "get": {
-        "tags": ["Profile"],
+        "tags": [
+          "Profile"
+        ],
         "summary": "Get company profile",
         "description": "Retrieve company profile details",
         "parameters": [
@@ -202,7 +210,9 @@
         }
       },
       "put": {
-        "tags": ["Profile"],
+        "tags": [
+          "Profile"
+        ],
         "summary": "Update company profile",
         "description": "Update company profile details",
         "parameters": [
@@ -240,9 +250,11 @@
         }
       }
     },
-    "/jobs": {
+    "/api/v1/sgjm/jobs": {
       "get": {
-        "tags": ["Jobs"],
+        "tags": [
+          "Jobs"
+        ],
         "summary": "List company job posts",
         "description": "Get all job posts for the authenticated company",
         "parameters": [
@@ -267,7 +279,11 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
+              "enum": [
+                "DRAFT",
+                "PUBLISHED",
+                "ARCHIVED"
+              ]
             }
           }
         ],
@@ -285,7 +301,9 @@
         }
       },
       "post": {
-        "tags": ["Jobs"],
+        "tags": [
+          "Jobs"
+        ],
         "summary": "Create job post",
         "description": "Create a new job posting",
         "requestBody": {
@@ -312,9 +330,11 @@
         }
       }
     },
-    "/jobs/{jobId}": {
+    "/api/v1/sgjm/jobs/{jobId}": {
       "get": {
-        "tags": ["Jobs"],
+        "tags": [
+          "Jobs"
+        ],
         "summary": "Get job post",
         "description": "Get job post details by ID",
         "parameters": [
@@ -342,7 +362,9 @@
         }
       },
       "put": {
-        "tags": ["Jobs"],
+        "tags": [
+          "Jobs"
+        ],
         "summary": "Update job post",
         "description": "Update job post details",
         "parameters": [
@@ -380,7 +402,9 @@
         }
       },
       "delete": {
-        "tags": ["Jobs"],
+        "tags": [
+          "Jobs"
+        ],
         "summary": "Delete job post",
         "description": "Delete a job post",
         "parameters": [
@@ -401,9 +425,11 @@
         }
       }
     },
-    "/subscriptions/status": {
+    "/api/v1/sgjm/subscriptions/status": {
       "get": {
-        "tags": ["Subscription"],
+        "tags": [
+          "Subscription"
+        ],
         "summary": "Get subscription status",
         "description": "Get current subscription status for the authenticated company",
         "responses": {
@@ -420,9 +446,11 @@
         }
       }
     },
-    "/subscriptions/checkout": {
+    "/api/v1/sgjm/subscriptions/checkout": {
       "post": {
-        "tags": ["Subscription"],
+        "tags": [
+          "Subscription"
+        ],
         "summary": "Initiate checkout",
         "description": "Start premium subscription checkout process",
         "responses": {
@@ -444,7 +472,12 @@
     "schemas": {
       "RegisterRequest": {
         "type": "object",
-        "required": ["email", "password", "name", "country"],
+        "required": [
+          "email",
+          "password",
+          "name",
+          "country"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -467,7 +500,10 @@
       },
       "LoginRequest": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -578,7 +614,12 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["FULL_TIME", "PART_TIME", "INTERNSHIP", "CONTRACT"]
+              "enum": [
+                "FULL_TIME",
+                "PART_TIME",
+                "INTERNSHIP",
+                "CONTRACT"
+              ]
             }
           },
           "salaryMin": {
@@ -611,7 +652,11 @@
       },
       "CreateJobRequest": {
         "type": "object",
-        "required": ["title", "description", "location"],
+        "required": [
+          "title",
+          "description",
+          "location"
+        ],
         "properties": {
           "title": {
             "type": "string"
@@ -698,7 +743,12 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["FREE", "ACTIVE", "EXPIRED", "CANCELLED"]
+            "enum": [
+              "FREE",
+              "ACTIVE",
+              "EXPIRED",
+              "CANCELLED"
+            ]
           },
           "plan": {
             "type": "string"
