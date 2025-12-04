@@ -69,6 +69,13 @@
               "technical/data-model",
               "technical/deployment"
             ]
+          },
+          {
+            "group": "Legal",
+            "pages": [
+              "legal/terms-of-service",
+              "legal/privacy-policy"
+            ]
           }
         ]
       },
